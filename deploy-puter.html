@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head><title>Deploy AI Study to Puter</title></head>
+<body style="font-family:sans-serif;max-width:600px;margin:40px auto;padding:20px">
+  <h1>AI Study — Puter 部署工具</h1>
+  <p>点击部署前，请确保已经 <code>npm run build</code> 生成了 <code>out/</code> 目录。</p>
+  <button id="deployBtn" style="padding:12px 24px;font-size:16px;background:#000;color:#fff;border:none;border-radius:8px;cursor:pointer">
+    部署到 Puter
+  </button>
+  <div id="status" style="margin-top:16px;padding:12px;border-radius:8px;background:#f5f5f5;white-space:pre-wrap;font-size:13px"></div>
+
+  <script src="https://js.puter.com/v2/"></script>
+  <script>
+    const btn = document.getElementById('deployBtn');
+    const status = document.getElementById('status');
+
+    function log(msg) { status.textContent += msg + '\n'; }
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      btn.textContent = '部署中...';
+      status.textContent = '';
+
+      try {
+        await puter.auth.signIn();
+        log('✓ 登录成功');
+
+        const dirName = 'ai-study-' + Date.now().toString(36);
+        await puter.fs.mkdir(dirName);
+        log(`✓ 创建目录: ${dirName}`);
+
+        // 上传 out/ 中的所有文件
+        const files = [
+          'index.html', '404.html', '_not-found.html',
+          'favicon.ico', 'icon.ico',
+        ];
+        
+        // 上传根文件
+        for (const f of files) {
+          const resp = await fetch(f);
+          if (resp.ok) {
+            const content = await resp.text();
+            await puter.fs.write(`${dirName}/${f}`, content);
+            log(`  ✓ ${f}`);
+          }
+        }
+
+        // 上传 _next 目录
+        const nextFiles = [
+          'static/chunks/app/page-*.js',
+          'static/chunks/app/layout-*.js',
+          'static/chunks/framework-*.js',
+          'static/chunks/main-app-*.js',
+          'static/css/*.css',
+          'static/media/*',
+          'static/webpack-*.js',
+          'build-manifest.json',
+          'app-build-manifest.json',
+          'react-loadable-manifest.json',
+        ];
+        
+        // 用 fetch 获取 _next 目录结构
+        const indexTxt = await fetch('index.txt');
+        if (indexTxt.ok) {
+          const lines = (await indexTxt.text()).split('\n');
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed) continue;
+            const resp = await fetch(trimmed);
+            if (resp.ok) {
+              const content = await resp.text();
+              const parts = trimmed.split('/');
+              const subDir = parts.slice(0, -1).join('/');
+              if (subDir) {
+                await puter.fs.mkdir(`${dirName}/${subDir}`).catch(() => {});
+              }
+              await puter.fs.write(`${dirName}/${trimmed}`, content);
+              log(`  ✓ ${trimmed}`);
+            }
+          }
+        }
+
+        // 创建 hosting
+        const subdomain = 'ai-study-' + Date.now().toString(36).slice(-6);
+        const site = await puter.hosting.create(subdomain, dirName);
+
+        const url = `https://${site.subdomain}.puter.site`;
+        log(`\n✓ 部署成功!`);
+        log(`网址: ${url}`);
+        status.innerHTML = status.textContent.replace(url, `<a href="${url}" target="_blank">${url}</a>`);
+      } catch (err) {
+        log(`✗ 错误: ${err.message}`);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '部署到 Puter';
+      }
+    });
+  </script>
+</body>
+</html>
