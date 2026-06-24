@@ -16,12 +16,13 @@ import PersonalWiki from "./PersonalWiki";
 import IntensitySelector from "./IntensitySelector";
 import UpgradeModal from "./UpgradeModal";
 import { SYSTEM_PROMPTS } from "@/lib/prompts";
-import { INTENSITY_MODELS, VISION_MODEL, MODE_COST } from "@/lib/puter";
+import { INTENSITY_MODELS, VISION_MODEL, MODE_COST, MODEL_CREDIT_COST, MEDIUM_MODELS, HARD_MODELS, EXTREME_MERGE_MODEL, CROSS_VALIDATION_MODELS, TIER_ACCESS } from "@/lib/puter";
 import { addQuestion, getQuestionBank, Question } from "@/lib/examEngine";
 import { getCreditData, getAvailableCredits, deductCredits, hasEnoughCredits } from "@/lib/credits";
 import { analyzeQuestion } from "@/lib/questionAnalyzer";
 import { addKnowledgeEntry } from "@/lib/knowledgeBase";
 import { saveToBackend, loadFromBackend } from "@/lib/backend";
+import { chatCompletion, streamCompletion } from "@/lib/api";
 
 interface Conversation {
   id: string;
@@ -44,7 +45,7 @@ const TIER_NAMES: Record<string, string> = {
   "pro+": "Pro+",
 };
 
-export default function AppShell({ user }: { user: Record<string, unknown> | null }) {
+export default function AppShell({ user, onLogout }: { user: Record<string, unknown> | null; onLogout: () => void }) {
   const userId = (user?.id as string) || (user?.username as string) || "anonymous";
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentId, setCurrentId] = useState<string | null>(null);
@@ -188,6 +189,16 @@ export default function AppShell({ user }: { user: Record<string, unknown> | nul
       if (creditTierVal !== "free") return INTENSITY_MODELS.medium.id;
       return INTENSITY_MODELS.easy.id;
     }
+    const allowed = TIER_ACCESS[creditTierVal] || TIER_ACCESS.free;
+    if (!allowed.includes(intensityVal)) {
+      return INTENSITY_MODELS.easy.id;
+    }
+    if (intensityVal === "medium") {
+      return MEDIUM_MODELS[Math.floor(Math.random() * MEDIUM_MODELS.length)];
+    }
+    if (intensityVal === "hard") {
+      return HARD_MODELS[Math.floor(Math.random() * HARD_MODELS.length)];
+    }
     return INTENSITY_MODELS[intensityVal]?.id || INTENSITY_MODELS.easy.id;
   }, []);
 
@@ -197,30 +208,19 @@ export default function AppShell({ user }: { user: Record<string, unknown> | nul
     for (const img of imageDataUrls) {
       parts.push({ type: "image_url", image_url: { url: img } });
     }
-    const response = await puter.ai.chat(
+    const response = await chatCompletion(
       [
         { role: "system", content: "Analyze the image(s) provided. If there is text, extract it. If it's a diagram or formula, describe it in detail. Respond in Chinese if the user writes in Chinese." },
         { role: "user", content: parts },
       ],
-      { model: VISION_MODEL, stream: false }
+      { model: VISION_MODEL }
     );
-    let text = "";
-    if (typeof response === "string") text = response;
-    else if (response?.message?.content) text = response.message.content;
-    else if (response?.text) text = response.text;
-    return text || "无法识别图片内容";
+    return response || "无法识别图片内容";
   }, []);
 
   const sendMessage = useCallback(async (text?: string) => {
     const content = text || input.trim();
     if ((!content && images.length === 0 && files.length === 0) || isLoading) return;
-
-    const cost = MODE_COST[activeMode] || 10;
-    refreshCredits();
-    if (!hasEnoughCredits(userId, cost)) {
-      setShowUpgrade(true);
-      return;
-    }
 
     let convId = currentId;
     let convMode = mode;
@@ -249,6 +249,25 @@ export default function AppShell({ user }: { user: Record<string, unknown> | nul
       }
     }
 
+    let resolvedIntensity = intensity;
+    if (intensity === "auto" && (processedContent || content)) {
+      try {
+        const analysis = await analyzeQuestion(processedContent || content);
+        const allowedLevels = TIER_ACCESS[creditTier] || TIER_ACCESS.free;
+        const difficultyMap: Record<string, string> = { easy: "easy", medium: "medium", hard: "hard" };
+        const preferred = difficultyMap[analysis.difficulty] || "easy";
+        resolvedIntensity = allowedLevels.includes(preferred) ? preferred : allowedLevels[allowedLevels.length - 1];
+      } catch {}
+    }
+
+    const autoFee = intensity === "auto" ? (MODEL_CREDIT_COST["auto"] || 2) : 0;
+    const cost = (MODEL_CREDIT_COST[resolvedIntensity] || 1) + autoFee + (MODE_COST[activeMode] || 1);
+    refreshCredits();
+    if (!hasEnoughCredits(userId, cost)) {
+      setShowUpgrade(true);
+      return;
+    }
+
     const userMessage: Message = {
       role: "user",
       content: processedContent,
@@ -274,65 +293,77 @@ export default function AppShell({ user }: { user: Record<string, unknown> | nul
     try {
       abortRef.current = new AbortController();
 
-      const effectiveModel = getEffectiveModel(intensity, creditTier);
-      const allMessages = [...((conversations.find((c) => c.id === convId)?.messages) || []), userMessage];
-
-      const puterMessages: Array<{ role: string; content: unknown }> = [
+      const effectiveModel = getEffectiveModel(resolvedIntensity, creditTier);
+      const apiMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
         { role: "system", content: MODE_PROMPTS[convMode] },
         { role: "user", content: processedContent || content },
       ];
 
-      const isExtremeMode = intensity === "extreme" && isPaidTier;
+      const isExtremeMode = resolvedIntensity === "extreme" && isPaidTier;
       let finalContent = "";
 
       if (isExtremeMode) {
-        setStatusText("交叉验证中 (Model 1/2)...");
-        const models = ["gpt-5.4", "claude-sonnet-4"];
+        const models = CROSS_VALIDATION_MODELS;
         const responses: string[] = [];
 
         for (let i = 0; i < models.length; i++) {
           setStatusText(`交叉验证中 (Model ${i + 1}/${models.length})...`);
           if (abortRef.current?.signal.aborted) break;
-          const resp = await puter.ai.chat(puterMessages, { model: models[i], stream: false });
-          let text = "";
-          if (typeof resp === "string") text = resp;
-          else if (resp?.message?.content) text = resp.message.content;
-          else if (resp?.text) text = resp.text;
+          const text = await chatCompletion(apiMessages, { model: models[i], signal: abortRef.current?.signal });
           responses.push(text || "");
         }
 
         setStatusText("合并交叉验证结果...");
-        const mergeResp = await puter.ai.chat(
+        const responseList = responses.map((r, i) => `Response ${i + 1} (${models[i]}):\n${r}`).join("\n\n");
+        const mergeStream = streamCompletion(
           [
-            { role: "system", content: "You are a result merger. Combine the following 2 AI responses into one comprehensive, coherent answer. Remove duplicates, highlight consensus, and note any differences." },
-            { role: "user", content: `Response 1:\n${responses[0]}\n\nResponse 2:\n${responses[1]}\n\nCombine these into one answer:` },
+            { role: "system", content: "You are a result merger. Combine the following AI responses into one comprehensive, coherent answer. Remove duplicates, highlight consensus, and note any differences." },
+            { role: "user", content: `${responseList}\n\nCombine these into one answer:` },
           ],
-          { model: "claude-sonnet-4", stream: true }
+          { model: EXTREME_MERGE_MODEL, signal: abortRef.current?.signal }
         );
-        for await (const part of mergeResp) {
+        for await (const part of mergeStream) {
           if (abortRef.current?.signal.aborted) break;
           if (part.text) finalContent += part.text;
           setConversations((prev) =>
             prev.map((c) =>
               c.id === convId
-                ? { ...c, messages: [...c.messages.slice(0, -1), { role: "assistant" as const, content: finalContent, meta: { intensity, model: "cross-validation" } }] }
-                : c
+                ? { ...c, messages: [...c.messages.slice(0, -1), { role: "assistant" as const, content: finalContent, meta: { intensity: resolvedIntensity, model: "cross-validation" } }] }
+: c
             )
           );
         }
-      } else {
+      } else if (resolvedIntensity === "hard" && isPaidTier) {
         setStatusText("AI 回答中...");
-        const response = await puter.ai.chat(puterMessages, { model: effectiveModel, stream: true });
+        const stream = streamCompletion(apiMessages, { model: effectiveModel, signal: abortRef.current?.signal });
         let accumulated = "";
         let reasoningAccumulated = "";
-        for await (const part of response) {
+        for await (const part of stream) {
           if (abortRef.current?.signal.aborted) break;
           if (part.text) accumulated += part.text;
           if (part.reasoning) reasoningAccumulated += part.reasoning;
           setConversations((prev) =>
             prev.map((c) =>
               c.id === convId
-                ? { ...c, messages: [...c.messages.slice(0, -1), { role: "assistant" as const, content: accumulated, reasoning: reasoningAccumulated || undefined, meta: { intensity, model: effectiveModel } }] }
+                ? { ...c, messages: [...c.messages.slice(0, -1), { role: "assistant" as const, content: accumulated, reasoning: reasoningAccumulated || undefined, meta: { intensity: resolvedIntensity, model: effectiveModel } }] }
+                : c
+            )
+          );
+        }
+        finalContent = accumulated;
+      } else {
+        setStatusText("AI 回答中...");
+        const stream = streamCompletion(apiMessages, { model: effectiveModel, signal: abortRef.current?.signal });
+        let accumulated = "";
+        let reasoningAccumulated = "";
+        for await (const part of stream) {
+          if (abortRef.current?.signal.aborted) break;
+          if (part.text) accumulated += part.text;
+          if (part.reasoning) reasoningAccumulated += part.reasoning;
+          setConversations((prev) =>
+            prev.map((c) =>
+              c.id === convId
+                ? { ...c, messages: [...c.messages.slice(0, -1), { role: "assistant" as const, content: accumulated, reasoning: reasoningAccumulated || undefined, meta: { intensity: resolvedIntensity, model: effectiveModel } }] }
                 : c
             )
           );
@@ -349,21 +380,16 @@ export default function AppShell({ user }: { user: Record<string, unknown> | nul
         handleSaveToKnowledgeBase(content.slice(0, 50), finalContent, "visualization");
       }
 
-      // Generate title with tencent/hy3-preview for new conversations
       if (isNewConv && content.length > 5) {
         try {
-          const titleResp = await puter.ai.chat(
+          const generatedTitle = await chatCompletion(
             [{ role: "user", content: `Generate a concise title (max 6 words, in Chinese if the user's message is Chinese) for this conversation based on this first user message: "${content}". Return ONLY the title, no quotes or extra text.` }],
-            { model: VISION_MODEL, stream: false }
+            { model: VISION_MODEL, signal: abortRef.current?.signal }
           );
-          let generatedTitle = "";
-          if (typeof titleResp === "string") generatedTitle = titleResp;
-          else if (titleResp?.message?.content) generatedTitle = titleResp.message.content;
-          else if (titleResp?.text) generatedTitle = titleResp.text;
           if (generatedTitle) {
-            generatedTitle = generatedTitle.replace(/^["']|["']$/g, "").trim().slice(0, 40);
+            const cleanTitle = generatedTitle.replace(/^["']|["']$/g, "").trim().slice(0, 40);
             setConversations((prev) =>
-              prev.map((c) => c.id === convId ? { ...c, title: generatedTitle } : c)
+              prev.map((c) => c.id === convId ? { ...c, title: cleanTitle } : c)
             );
           }
         } catch {}
@@ -411,10 +437,6 @@ export default function AppShell({ user }: { user: Record<string, unknown> | nul
     if (last) handleSaveToBank(last.q, last.a);
   }, [currentConv, handleSaveToBank]);
 
-  const handleLogout = useCallback(() => {
-    puter.auth.signOut().then(() => window.location.reload());
-  }, []);
-
   const handleUpgrade = useCallback(() => setShowUpgrade(true), []);
 
   const allQuestions: Question[] = getQuestionBank();
@@ -436,7 +458,7 @@ export default function AppShell({ user }: { user: Record<string, unknown> | nul
           onOpenSearch={() => setSearchOpen(true)}
           onOpenFlashCards={() => setFlashOpen(true)}
           onOpenWiki={() => setWikiOpen(true)}
-          onLogout={handleLogout}
+          onLogout={onLogout}
           onUpgrade={handleUpgrade}
         />
       )}
@@ -485,7 +507,7 @@ export default function AppShell({ user }: { user: Record<string, unknown> | nul
             <div className="h-full flex flex-col items-center justify-center px-6 animate-fade-in">
               <div className="text-center mb-8">
                 <h1 className="font-serif-body text-2xl font-bold tracking-tight mb-1">AI Study</h1>
-                <p className="text-muted text-[13px]">STEM Learning Engine powered by Puter</p>
+                <p className="text-muted text-[13px]">STEM Learning Engine</p>
               </div>
               <div className="flex gap-3">
                 {([
@@ -550,6 +572,7 @@ export default function AppShell({ user }: { user: Record<string, unknown> | nul
                 {credits}
               </span>
               <span className="text-[10px]">{TIER_NAMES[creditTier] || "Free"}</span>
+              <span className="text-[9px] text-muted/50 ml-0.5">/mo</span>
             </button>
           </div>
           <div className="max-w-3xl mx-auto">
@@ -601,11 +624,11 @@ export default function AppShell({ user }: { user: Record<string, unknown> | nul
             <div className="flex items-center gap-3">
               <Coins className="w-5 h-5 text-amber-500" />
               <div>
-                <div className="text-sm font-medium">Credits Available</div>
-                <div className="text-xs text-muted">{credits} credits remaining · {TIER_NAMES[creditTier] || "Free"} plan</div>
+                <div className="text-sm font-medium">Monthly Quota</div>
+                <div className="text-xs text-muted">{credits} credits remaining this month · {TIER_NAMES[creditTier] || "Free"} plan</div>
                 {credits === 0 && (
                   <button onClick={() => { setShowCreditPopup(false); setShowUpgrade(true); }} className="text-xs text-amber-500 hover:text-amber-400 mt-1 underline">
-                    Upgrade to get more credits
+                    Upgrade plan for more monthly credits
                   </button>
                 )}
               </div>

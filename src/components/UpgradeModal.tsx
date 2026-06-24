@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Sparkles, X, Loader2 } from "lucide-react";
+import { Check, Sparkles, X, Loader2, Coins, BookOpen, Library, Network, Layers, ClipboardCheck } from "lucide-react";
 import { useState, useCallback } from "react";
 
 interface UpgradeModalProps {
@@ -16,47 +16,59 @@ const TIERS = [
   {
     name: "Plus",
     id: "plus" as const,
-    price: "$9.99",
+    price: "$14.99",
     period: "/month",
+    credits: 200,
     popular: false,
     features: [
-      "200 credits / 3hr",
-      "Balanced model (Claude Sonnet-4)",
-      "Basic file upload",
-      "No ads",
+      "200 AI credits per month",
+      "Knowledge Base: 100 entries",
+      "Question Bank: 100 Q&A pairs",
+      "Personal Wiki: 100 entries",
+      "Auto Flashcards + Mock Exam + Search",
+      "DeepSeek v4-pro + Qwen 3.7-Max + GLM 5.2",
     ],
   },
   {
     name: "Pro",
     id: "pro" as const,
-    price: "$19.99",
+    price: "$29.99",
     period: "/month",
+    credits: 2000,
     popular: true,
     features: [
-      "500 credits / 3hr",
-      "All models (Deep + Extreme)",
-      "Multi-model cross-validation",
-      "Reasoning / Thinking access",
-      "Priority file processing",
+      "2,000 AI credits per month",
+      "All study tools: unlimited storage",
+      "All AI models (Light → Extreme)",
+      "GPT-5.5 + Claude Opus 4.8 (Hard)",
+      "Extreme 7-model cross-validation",
       "Priority support",
     ],
   },
   {
     name: "Pro+",
     id: "pro+" as const,
-    price: "$39.99",
+    price: "$99.99",
     period: "/month",
+    credits: 10000,
     popular: false,
     features: [
-      "Unlimited credits",
+      "10,000 AI credits per month",
+      "All study tools: unlimited storage",
       "All models + latest preview",
-      "Multi-model cross-validation",
-      "Unlimited file processing",
-      "Full reasoning",
+      "Unlimited file parsing",
       "Priority support + SLA",
       "Early feature access",
     ],
   },
+];
+
+const STUDY_FEATURES = [
+  { icon: BookOpen, label: "Knowledge Base" },
+  { icon: Library, label: "Question Bank" },
+  { icon: Network, label: "Personal Wiki" },
+  { icon: Layers, label: "Auto Flashcards" },
+  { icon: ClipboardCheck, label: "Mock Exam" },
 ];
 
 export default function UpgradeModal({ onBack, onSelect, userId, userEmail, currentTier }: UpgradeModalProps) {
@@ -136,7 +148,13 @@ export default function UpgradeModal({ onBack, onSelect, userId, userEmail, curr
                     <span className="text-sm text-muted">{tier.period}</span>
                   </div>
 
-                  <div className="mt-5 flex-1 space-y-2.5">
+                  <div className="mt-3 flex items-center gap-1.5 py-1.5 px-2.5 rounded-md bg-foreground/[0.03] border border-input-border/50">
+                    <Coins className="w-3.5 h-3.5 text-amber-500" />
+                    <span className="text-xs font-semibold text-foreground">{tier.credits.toLocaleString()}</span>
+                    <span className="text-[10px] text-muted">AI credits/mo</span>
+                  </div>
+
+                  <div className="mt-4 flex-1 space-y-2.5">
                     {tier.features.map((feat) => (
                       <div key={feat} className="flex items-start gap-2 text-sm">
                         <Check className="w-4 h-4 mt-0.5 shrink-0 text-emerald-500" />
@@ -169,12 +187,26 @@ export default function UpgradeModal({ onBack, onSelect, userId, userEmail, curr
             })}
           </div>
 
-          <div className="mt-6 text-center space-y-2">
+          <div className="mt-6">
+            <div className="flex items-center justify-center gap-4 flex-wrap py-3 px-4 rounded-lg bg-foreground/[0.02] border border-divider">
+              {STUDY_FEATURES.map((f) => {
+                const FeatureIcon = f.icon;
+                return (
+                  <div key={f.label} className="flex items-center gap-1.5 text-xs text-muted">
+                    <FeatureIcon className="w-3.5 h-3.5" />
+                    {f.label}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mt-4 text-center space-y-1.5">
             <p className="text-xs text-muted">
               All plans include a 7-day free trial. Cancel anytime.
             </p>
-            <p className="text-[10px] text-muted/50">
-              Securely processed by our payment partners. We accept Visa, Mastercard, Alipay, WeChat Pay & PayPal.
+            <p className="text-xs text-muted/60">
+              AI credits reset monthly. Study tools (Knowledge Base, Wiki, Question Bank, Flashcards, Mock Exam) use storage space instead of credits.
             </p>
           </div>
         </div>

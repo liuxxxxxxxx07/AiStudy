@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Study - Puter",
-  description: "STEM Learning Engine powered by Puter",
+  title: "AI Study",
+  description: "STEM Learning Engine",
 };
 
 export default function RootLayout({
@@ -30,9 +30,6 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full`}
       suppressHydrationWarning
     >
-      <head>
-        <script src="https://js.puter.com/v2/"></script>
-      </head>
       <body className="h-full">
         <Providers>{children}</Providers>
       </body>

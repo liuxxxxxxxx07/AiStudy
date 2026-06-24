@@ -22,7 +22,6 @@ const COURSE_KEYWORDS: Record<string, string[]> = {
 
 const STEM_SUBJECTS = ["数学", "物理", "化学", "生物", "计算机", "工程", "统计"];
 
-// Try to match based on keywords first (no API cost)
 function localAnalysis(text: string): QuestionAnalysis | null {
   const lower = text.toLowerCase();
   const matchedCourses: string[] = [];
@@ -52,8 +51,8 @@ export async function analyzeQuestion(text: string): Promise<QuestionAnalysis> {
   const local = localAnalysis(text);
   if (local) return local;
 
-  // Fallback: Use Puter AI for analysis
   try {
+    const { chatCompletion } = await import("@/lib/api");
     const prompt = `Analyze this STEM question and return a JSON object with:
 {
   "subject": "one of: 数学, 物理, 化学, 生物, 计算机, 工程, 其他",
@@ -64,11 +63,12 @@ export async function analyzeQuestion(text: string): Promise<QuestionAnalysis> {
 Question: ${text.slice(0, 500)}
 Return ONLY valid JSON, no other text.`;
 
-    const res = await puter.ai.chat(prompt, { model: "gpt-5.4-nano" });
-    const parsed = typeof res === "string" ? JSON.parse(res) : 
-      typeof res.message?.content === "string" ? JSON.parse(res.message.content) : 
-      JSON.parse(res.message?.content?.[0]?.text || "{}");
-    
+    const res = await chatCompletion(
+      [{ role: "user", content: prompt }],
+      { model: "openai/gpt-4o-mini" }
+    );
+    const parsed = JSON.parse(res);
+
     return {
       subject: parsed.subject || "其他",
       course: parsed.course || "通用",
@@ -86,6 +86,7 @@ export async function generateSimilarQuestions(
   count: number = 3
 ): Promise<SimilarQuestion[]> {
   try {
+    const { chatCompletion } = await import("@/lib/api");
     const prompt = `You are a STEM tutor. Based on this question and answer, generate ${count} similar practice questions with answers.
 
 Original question: ${question.slice(0, 300)}
@@ -94,9 +95,11 @@ Original answer: ${answer.slice(0, 500)}
 Return a JSON array of objects with "question" and "answer" fields. Make the questions different but testing the same concept.
 Return ONLY valid JSON array, no other text.`;
 
-    const res = await puter.ai.chat(prompt, { model: "gpt-5.4-nano" });
-    const text = typeof res === "string" ? res : res.message?.content?.[0]?.text || res.message?.content || "[]";
-    const parsed = JSON.parse(text);
+    const res = await chatCompletion(
+      [{ role: "user", content: prompt }],
+      { model: "openai/gpt-4o-mini" }
+    );
+    const parsed = JSON.parse(res);
     return Array.isArray(parsed) ? parsed.slice(0, count) : [];
   } catch {
     return [];

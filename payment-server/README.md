@@ -64,7 +64,7 @@ LEMONSQUEEZY_VARIANT_PRO_PLUS=123456
 
 ```
 PORT=3001
-ALLOWED_ORIGINS=http://localhost:3000,https://ai-study.puter.site
+ALLOWED_ORIGINS=http://localhost:3000
 SERVER_URL=http://localhost:3001
 FRONTEND_URL=http://localhost:3000
 ```

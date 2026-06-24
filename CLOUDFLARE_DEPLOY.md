@@ -60,12 +60,3 @@ npm run deploy
 ```bash
 npm run deploy
 ```
-
-## 对比 Puter
-
-| 特性 | Puter | Cloudflare Pages |
-|------|-------|-----------------|
-| 费用 | 免费版有存储限制 | Free plan: 500 builds/mo, 无限带宽 |
-| 国内访问 | 有优化 | 国内有节点，速度较好 |
-| 部署 | CLI / SDK 手动上传 | CLI push / Git 自动部署 |
-| 自定义域名 | 不支持 | 支持 |

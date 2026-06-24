@@ -44,7 +44,7 @@ export default function AdminStats({ onBack }: { onBack: () => void }) {
           <div className="text-center text-muted text-sm py-20">
             <HardDrive className="w-12 h-12 mx-auto mb-3 opacity-30" />
             <p>Unable to fetch stats</p>
-            <p className="text-xs mt-1">Make sure Puter.js is loaded and you are signed in</p>
+            <p className="text-xs mt-1">Data is stored locally in your browser</p>
           </div>
         ) : (
           <div className="max-w-2xl mx-auto space-y-6">

@@ -2,6 +2,8 @@ name = "ai-study"
 compatibility_date = "2026-06-24"
 
 pages_build_output_dir = "out"
+pages_build_command = "npm run build"
 
 [env.production]
 pages_build_output_dir = "out"
+pages_build_command = "npm run build"

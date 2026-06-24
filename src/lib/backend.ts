@@ -1,11 +1,5 @@
 "use client";
 
-declare global {
-  interface Window {
-    puter: typeof puter;
-  }
-}
-
 const KV_PREFIX = "ai-study-data";
 
 interface StoredData {
@@ -32,13 +26,17 @@ interface MessageData {
 
 interface CreditData {
   balance: number;
-  lastRefill: number;
+  lastResetMonth: string;
   tier: string;
+}
+
+function getStorageKey(userId: string): string {
+  return `${KV_PREFIX}-${userId}`;
 }
 
 export async function saveToBackend(userId: string, data: StoredData): Promise<void> {
   try {
-    await puter.kv.set(`${KV_PREFIX}-${userId}`, JSON.stringify(data));
+    localStorage.setItem(getStorageKey(userId), JSON.stringify(data));
   } catch (err) {
     console.error("Backend save failed:", err);
     throw err;
@@ -47,9 +45,9 @@ export async function saveToBackend(userId: string, data: StoredData): Promise<v
 
 export async function loadFromBackend(userId: string): Promise<StoredData | null> {
   try {
-    const raw = await puter.kv.get(`${KV_PREFIX}-${userId}`);
+    const raw = localStorage.getItem(getStorageKey(userId));
     if (!raw) return null;
-    return typeof raw === "string" ? JSON.parse(raw) : raw as StoredData;
+    return JSON.parse(raw) as StoredData;
   } catch (err) {
     console.error("Backend load failed:", err);
     return null;

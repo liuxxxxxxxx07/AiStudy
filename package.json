@@ -1,5 +1,5 @@
 {
-  "name": "ai-study-puter",
+  "name": "ai-study",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -12,6 +12,7 @@
     "cf:create": "wrangler pages project create ai-study"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.108.2",
     "@types/mermaid": "^9.1.0",
     "jszip": "^3.10.1",
     "katex": "^0.17.0",

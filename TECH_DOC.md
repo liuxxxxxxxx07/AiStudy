@@ -1,22 +1,18 @@
-# AI Study - Puter 版技术文档
+# AI Study 技术文档
 
 ## 架构概览
 
-纯静态 Next.js 应用（`output: 'export'`），部署在 Puter Hosting 平台。使用 Puter.js SDK 完成认证、AI 聊天、KV 存储。
+纯静态 Next.js 应用（`output: 'export'`），使用 OpenRouter API 完成 AI 聊天功能，localStorage 存储用户数据。
 
 ```mermaid
 flowchart TD
-  Browser[Browser - ai-study.puter.site]
-  Browser --> CDN["puter.js (CDN)"]
-  CDN --> Auth["puter.auth.signIn - 登录"]
-  CDN --> AI["puter.ai.chat - AI 聊天"]
-  CDN --> KV["puter.kv - 云端同步"]
-  Browser --> LocalST["localStorage 回退"]
+  Browser[Browser]
+  Browser --> API["OpenRouter API - AI 聊天"]
+  Browser --> LocalST["localStorage 存储"]
   LocalST --> QBank["题库 (examEngine)"]
   LocalST --> KB["知识库 (knowledgeBase)"]
   LocalST --> Wiki["个人 Wiki (wikiEngine)"]
-  KV --> CloudSync["跨设备数据同步"]
-  AI --> Models["GPT-5.4 / Claude / Tencent"]
+  API --> Models["GPT-4o / Claude / Tencent"]
 ```
 
 ## 技术栈
@@ -38,8 +34,8 @@ flowchart TD
 
 ### 认证流程
 ```
-页面加载 → puter.auth.isSignedIn() → 已登录: 加载云端数据 → 未登录: LoginScreen
-登录后: 从 Puter KV 拉取对话记录 + 额度数据 → 显示登录积分弹窗 (5秒自动消失)
+页面加载 → 检查 localStorage 用户信息 → 已登录: 加载本地数据 → 未登录: LoginScreen
+登录后: 从 localStorage 拉取对话记录 + 额度数据 → 显示登录积分弹窗 (5秒自动消失)
 ```
 
 ### AI 聊天流程
@@ -48,17 +44,16 @@ flowchart TD
 → 如有图片: 先用 tencent/hy3-preview 识别图片内容 (Vision Model)
 → 检查额度 → 不足则弹出 Upgrade 升级界面
 → 模型选择: Auto(默认) → 根据付费等级自动选择 / 付费用户可选 Balanced/Deep/Extreme
-→ Extreme 模式: 多模型交叉验证 (GPT-5.4 + Claude 各自回答 → 合并结果)
-→ puter.ai.chat(stream) → 流式更新 UI
+→ Extreme 模式: 多模型交叉验证 (GPT-4o + Claude 各自回答 → 合并结果)
+→ OpenRouter API stream → 流式更新 UI
 → 后台: tencent/hy3-preview 生成对话标题 (最大6词, 根据输入语言)
-→ 数据自动保存到 Puter KV (2秒防抖)
+→ 数据自动保存到 localStorage (2秒防抖)
 ```
 
 ### 数据同步流程
 ```
-登录成功 → loadFromBackend(userId) → Puter KV 拉取对话+额度
-对话变更 → debounced persist (2秒) → saveToBackend(userId) → Puter KV 写入
-离线回退: localStorage 作为备用存储
+登录成功 → loadFromBackend(userId) → localStorage 拉取对话+额度
+对话变更 → debounced persist (2秒) → saveToBackend(userId) → localStorage 写入
 ```
 
 ## 核心模块
@@ -68,7 +63,7 @@ flowchart TD
 | 模块 | 文件 |
 |------|------|
 | 登录 UI | `components/LoginScreen.tsx` |
-| Puter 封装 | `lib/puter.ts` |
+| OpenAI (OpenRouter) | `lib/api.ts` |
 | 额度管理 | `lib/credits.ts` |
 | 云端同步 | `lib/backend.ts` |
 
@@ -95,10 +90,10 @@ flowchart TD
 | 强度 | 模型 | 付费 | 说明 |
 |------|------|------|------|
 | Auto 🔄 | `tencent/hy3-preview` | 免费 | 默认，根据套餐自动选择 |
-| Light 🌱 | `gpt-5.4-nano` | 免费 | 轻量快速 |
-| Balanced ⚖️ | `claude-sonnet-4` | 付费 | 平衡模式 |
-| Deep 🔬 | `gpt-5.4` | 付费 | 深入分析 |
-| Extreme ⚡ | 多模型交叉验证 | 付费 | GPT-5.4 + Claude 分别回答 → 合并结果 |
+| Light 🌱 | `openai/gpt-4o-mini` | 免费 | 轻量快速 |
+| Balanced ⚖️ | `anthropic/claude-sonnet-4-20250514` | 付费 | 平衡模式 |
+| Deep 🔬 | `openai/gpt-4o` | 付费 | 深入分析 |
+| Extreme ⚡ | 多模型交叉验证 | 付费 | GPT-4o + Claude 分别回答 → 合并结果 |
 
 **UI**: 可拖动的滑块组件，位于聊天输入框上方。点击展开详细选择面板，付费选项显示 `PAID` 标签。
 
@@ -235,8 +230,8 @@ E:\ai-study-puter
 │   │   ├── MermaidRenderer.tsx  # Mermaid 图表渲染
 │   │   └── Providers.tsx        # ThemeProvider
 │   └── lib/
-│       ├── puter.ts             # Puter API 封装 + 强度模型配置 + VISION_MODEL
-│       ├── backend.ts           # Puter KV 云端同步 + 站点统计
+│       ├── api.ts                # OpenRouter API 封装
+│       ├── backend.ts           # localStorage 存储 + 站点统计
 │       ├── credits.ts           # 额度系统
 │       ├── examEngine.ts        # 题库 + 模拟考引擎
 │       ├── knowledgeBase.ts     # 知识库引擎
@@ -255,50 +250,28 @@ npm run dev       # http://localhost:3000
 npm run build     # 输出到 out/ 目录
 ```
 
-## 部署到 Puter Hosting
-
-### 方式一: Puter.js SDK 脚本 (推荐)
+## 构建部署
 
 ```bash
 npm run build
-node deploy-fixed.js
 ```
 
-`deploy-fixed.js` 使用 `@heyputer/puter.js` SDK 逐个上传文件到 `/cool_fish_5051/ai-study-site-deploy`，然后更新托管站点。
+## 数据存储
 
-### 方式二: Puter CLI
+所有数据存储在浏览器 localStorage 中。
 
-```bash
-npm run build
-puter site deploy out ai-study
-```
-
-### 托管配置
-
-- 子域名: `ai-study`
-- 域名: `https://ai-study.puter.site`
-- 根目录: `/cool_fish_5051/ai-study-site-deploy`
-
-### 架构说明
-
-```
-npm run build → out/ (静态 HTML/CSS/JS)
-node deploy-fixed.js → 
-  1. puter.fs.mkdir → 创建目录
-  2. puter.fs.write → 逐个上传 176 个文件
-  3. puter.hosting.update → 绑定域名
-```
-
-## 更新日志
+### v1.2.0 (2026-06-24)
+- **移除 Puter 依赖**: 改用 OpenRouter API，localStorage 存储
+- **新登录系统**: 用户名输入登录
 
 ### v1.1.0 (2026-06-24)
 - **强度选择器**: 原"难度选择器"重命名为"强度选择器"，改为可拖动滑块UI，位于聊天框上方
 - **Auto 默认强度**: 初始为 Auto 模式，使用 `tencent/hy3-preview`，免费用户可用 Auto + Light
-- **Extreme 极速模式**: 多模型交叉验证 (GPT-5.4 + Claude 独立回答 → 合并结果)
+- **Extreme 极速模式**: 多模型交叉验证 (GPT-4o + Claude 独立回答 → 合并结果)
 - **付费锁定**: Balanced/Deep/Extreme 强度需要付费套餐，点击弹出升级界面
 - **升级界面**: 全新 `UpgradeModal.tsx` 精美弹窗，3 套餐卡片对比，Popular 标签，玻璃背景
 - **积分耗尽自动升级**: 额度不足时自动弹出升级界面
-- **Puter KV 云端同步**: `lib/backend.ts`，登录后自动从云端拉取对话和额度，变更后 2 秒防抖写入
+- **localStorage 存储**: 对话和额度数据存储在浏览器本地
 - **登录积分弹窗**: 登录后显示积分和套餐等级，5 秒自动消失，额度为 0 时显示升级链接
 - **侧边栏简化**: 移除左侧模式切换按钮，仅保留 Header 中央模式切换
 - **图片识别**: `tencent/hy3-preview` 作为 Vision Model，发送前自动识别图片内容
@@ -312,11 +285,11 @@ node deploy-fixed.js →
 - 对话创建逻辑: 首次发送消息时自动创建，标题由 `tencent/hy3-preview` 自动生成
 - 登录后弹窗显示额度信息
 - 侧边栏增加 Upgrade 按钮
-- 新增 `deploy-fixed.js` (SDK 批量部署脚本)
+- 新增 `lib/api.ts` (OpenRouter API 封装)
 
 ### v1.0.0 (2026-06-23)
-- Puter.js 集成: 认证/AI聊天/文件存储
-- 登录系统: `puter.auth.signIn()` 弹窗登录
+- OpenRouter API 集成: AI 聊天
+- 登录系统: 用户名登录
 - 额度系统: 50积分/3小时
 - 三级难度选择: Easy/Medium/Hard
 - 付费方案 UI

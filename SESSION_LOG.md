@@ -1,27 +1,27 @@
-# AI Study - Puter 版项目日志
+# AI Study 项目日志
 
 ## 项目位置
 `E:\ai-study-puter`
 
 ## 部署方式
-Puter Hosting (静态站点) — 无服务端 API，纯客户端应用
+静态站点 (Next.js static export) — 纯客户端应用
 
 ## 技术栈
 - Next.js 16.2.9 (static export) + React 19 + TypeScript + Tailwind CSS 4
-- Puter.js (`https://js.puter.com/v2/`) — 认证、AI 聊天、文件存储
-- 数据持久化: localStorage (对话、题库、知识库)
+- OpenRouter API — AI 聊天
+- 数据持久化: localStorage (对话、题库、知识库、用户)
 
 ## 项目结构
 ```
 src/
 ├── app/
-│   ├── layout.tsx               # 根布局 (Puter.js script)
-│   └── page.tsx                 # 入口 (登录Gate + AppShell)
+│   ├── layout.tsx               # 根布局
+│   └── page.tsx                 # 入口 (登录 + AppShell)
 ├── components/
-│   ├── AppShell.tsx              # 主应用 (Puter AI 流式对话 + 额度 + 所有功能)
+│   ├── AppShell.tsx              # 主应用 (AI 流式对话 + 额度 + 所有功能)
 │   ├── Sidebar.tsx               # 侧边栏 (New Chat + 题库/知识库/模拟考/检索/闪卡入口)
 │   ├── MessageBubble.tsx         # 消息气泡 + 保存到题库 + 举一反三
-│   ├── LoginScreen.tsx           # 登录界面 (Puter Auth)
+│   ├── LoginScreen.tsx           # 登录界面
 │   ├── PaymentPlans.tsx          # 定价页面 (Plus/Pro/Pro+)
 │   ├── CreditDisplay.tsx         # 额度显示
 │   ├── DifficultySelector.tsx    # Easy/Medium/Hard 难度选择器
@@ -36,9 +36,9 @@ src/
 │   ├── MermaidRenderer.tsx       # Mermaid 图表渲染
 │   └── Providers.tsx             # ThemeProvider 隔离
 └── lib/
-    ├── prompts.ts                # 3 种模式的 System Prompt
-    ├── puter.ts                  # Puter 辅助函数 + 模型/额度配置
-    ├── puter-types.d.ts          # Puter.js 类型声明
+    ├── api.ts                   # OpenRouter API 封装
+    ├── prompts.ts               # 3 种模式的 System Prompt
+    ├── puter.ts                 # 模型配置 + 额度配置
     ├── credits.ts                # 额度管理系统 (50积分/3小时)
     ├── examEngine.ts             # 题库/模拟考引擎
     ├── knowledgeBase.ts          # 知识库存储
@@ -47,10 +47,9 @@ src/
 
 ## 核心功能
 
-### 1. 登录系统 (Puter Auth)
-- 使用 `puter.auth.signIn()` 弹出窗口认证
-- 支持临时用户自动创建
-- `puter.auth.isSignedIn()` 自动检测登录状态
+### 1. 登录系统
+- 用户名输入登录
+- 存储在 localStorage 中
 
 ### 2. 额度系统
 - 新用户 50 积分，每 3 小时自动补充

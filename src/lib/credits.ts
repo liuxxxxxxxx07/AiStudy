@@ -1,24 +1,29 @@
 interface CreditData {
   balance: number;
-  lastRefill: number;
+  lastResetMonth: string;
   tier: "free" | "plus" | "pro" | "pro+";
 }
 
-const TIER_LIMITS: Record<string, { dailyLimit: number }> = {
-  free: { dailyLimit: 50 },
-  plus: { dailyLimit: 200 },
-  pro: { dailyLimit: 500 },
-  "pro+": { dailyLimit: 9999 },
+const MONTHLY_LIMITS: Record<string, number> = {
+  free: 5,
+  plus: 200,
+  pro: 2000,
+  "pro+": 10000,
 };
 
 function getStorageKey(userId: string): string {
   return `ai-study-credits-${userId}`;
 }
 
+function getMonthKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
 function getCreditData(userId: string): CreditData {
   const raw = localStorage.getItem(getStorageKey(userId));
   if (!raw) {
-    return { balance: 50, lastRefill: Date.now(), tier: "free" };
+    return { balance: 5, lastResetMonth: getMonthKey(), tier: "free" };
   }
   return JSON.parse(raw) as CreditData;
 }
@@ -30,11 +35,11 @@ function saveCreditData(userId: string, data: CreditData): void {
 function setTier(userId: string, tier: "free" | "plus" | "pro" | "pro+"): void {
   const data = getCreditData(userId);
   data.tier = tier;
-  const limits = TIER_LIMITS[tier];
-  if (limits) {
-    data.balance = limits.dailyLimit;
+  const limit = MONTHLY_LIMITS[tier];
+  if (limit !== undefined) {
+    data.balance = limit;
   }
-  data.lastRefill = Date.now();
+  data.lastResetMonth = getMonthKey();
   saveCreditData(userId, data);
 }
 
@@ -44,10 +49,11 @@ function clearTier(userId: string): void {
 
 function getAvailableCredits(userId: string): number {
   const data = getCreditData(userId);
-  const now = Date.now();
-  if (now - data.lastRefill > 3 * 60 * 60 * 1000) {
-    data.balance = data.tier === "free" ? 50 : data.tier === "plus" ? 200 : data.tier === "pro" ? 500 : 9999;
-    data.lastRefill = now;
+  const currentMonth = getMonthKey();
+  if (data.lastResetMonth !== currentMonth) {
+    const limit = MONTHLY_LIMITS[data.tier];
+    data.balance = limit !== undefined ? limit : 5;
+    data.lastResetMonth = currentMonth;
     saveCreditData(userId, data);
   }
   return data.balance;
@@ -67,18 +73,5 @@ function hasEnoughCredits(userId: string, amount: number): boolean {
   return getCreditData(userId).balance >= amount;
 }
 
-function getTierBonus(tier: string): { refillAmount: number; refillInterval: number } {
-  switch (tier) {
-    case "plus":
-      return { refillAmount: 200, refillInterval: 2 * 60 * 60 * 1000 };
-    case "pro":
-      return { refillAmount: 500, refillInterval: 60 * 60 * 1000 };
-    case "pro+":
-      return { refillAmount: 9999, refillInterval: 30 * 60 * 1000 };
-    default:
-      return { refillAmount: 50, refillInterval: 3 * 60 * 60 * 1000 };
-  }
-}
-
-export { getCreditData, saveCreditData, getAvailableCredits, deductCredits, hasEnoughCredits, getTierBonus, setTier, clearTier, TIER_LIMITS };
+export { getCreditData, saveCreditData, getAvailableCredits, deductCredits, hasEnoughCredits, setTier, clearTier, MONTHLY_LIMITS };
 export type { CreditData };

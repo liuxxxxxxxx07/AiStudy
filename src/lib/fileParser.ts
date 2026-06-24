@@ -151,6 +151,7 @@ function extractFromText(text: string, title: string): ExtractedContent {
 
 export async function analyzeWithAI(text: string): Promise<ExtractedContent | null> {
   try {
+    const { chatCompletion } = await import("@/lib/api");
     const prompt = `Analyze this educational content and extract structured information.
 
 Content:
@@ -168,9 +169,11 @@ Return a JSON object with:
 
 Return ONLY valid JSON, no other text.`;
 
-    const res = await puter.ai.chat(prompt, { model: "gpt-5.4-nano" });
-    const t = typeof res === "string" ? res : res.message?.content?.[0]?.text || res.message?.content || "{}";
-    const parsed = JSON.parse(t);
+    const res = await chatCompletion(
+      [{ role: "user", content: prompt }],
+      { model: "openai/gpt-4o-mini" }
+    );
+    const parsed = JSON.parse(res);
     return {
       title: parsed.title || "Untitled",
       text: text.slice(0, 5000),
