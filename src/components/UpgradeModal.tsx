@@ -2,6 +2,7 @@
 
 import { Check, Sparkles, X, Loader2, Coins, BookOpen, Library, Network, Layers, ClipboardCheck } from "lucide-react";
 import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 
 interface UpgradeModalProps {
   onBack: () => void;
@@ -72,6 +73,7 @@ const STUDY_FEATURES = [
 ];
 
 export default function UpgradeModal({ onBack, onSelect, userId, userEmail, currentTier }: UpgradeModalProps) {
+  const router = useRouter();
   const [loadingTier, setLoadingTier] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -208,6 +210,13 @@ export default function UpgradeModal({ onBack, onSelect, userId, userEmail, curr
             <p className="text-xs text-muted/60">
               AI credits reset monthly. Study tools (Knowledge Base, Wiki, Question Bank, Flashcards, Mock Exam) use storage space instead of credits.
             </p>
+            <div className="flex items-center justify-center gap-3 pt-2 text-[10px] text-muted/40">
+              <button onClick={() => router.push("/terms")} className="hover:text-foreground transition-colors">Terms</button>
+              <span>·</span>
+              <button onClick={() => router.push("/privacy")} className="hover:text-foreground transition-colors">Privacy</button>
+              <span>·</span>
+              <button onClick={() => router.push("/refund")} className="hover:text-foreground transition-colors">Refund</button>
+            </div>
           </div>
         </div>
       </div>

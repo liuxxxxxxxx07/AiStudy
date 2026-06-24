@@ -473,6 +473,14 @@ export default function PaymentPlans({ onBack, onSelect, userId, userEmail, curr
                 </button>
               </p>
             </div>
+
+            <div className="flex items-center justify-center gap-4 pt-2 text-xs text-muted/50">
+              <a href="/terms" className="hover:text-foreground transition-colors">Terms of Service</a>
+              <span className="text-divider">·</span>
+              <a href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</a>
+              <span className="text-divider">·</span>
+              <a href="/refund" className="hover:text-foreground transition-colors">Refund Policy</a>
+            </div>
           </section>
 
         </div>

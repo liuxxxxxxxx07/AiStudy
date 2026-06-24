@@ -186,6 +186,14 @@ export default function LoginScreen() {
               Pricing
             </button>
           </div>
+
+          <div className="mt-4 flex items-center justify-center gap-3 text-xs text-muted/40">
+            <button onClick={() => router.push("/terms")} className="hover:text-foreground transition-colors">Terms</button>
+            <span>·</span>
+            <button onClick={() => router.push("/privacy")} className="hover:text-foreground transition-colors">Privacy</button>
+            <span>·</span>
+            <button onClick={() => router.push("/refund")} className="hover:text-foreground transition-colors">Refund</button>
+          </div>
         </div>
       </div>
 
