@@ -443,7 +443,7 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
     if (last) handleSaveToBank(last.q, last.a);
   }, [currentConv, handleSaveToBank]);
 
-  const handleUpgrade = useCallback(() => setShowUpgrade(true), []);
+  const handleUpgrade = useCallback(() => router.push("/pricing"), [router]);
 
   const handleUpgradeSelect = useCallback(async (tierId: string) => {
     setShowUpgrade(false);
