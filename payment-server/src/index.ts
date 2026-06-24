@@ -3,6 +3,8 @@ import cors from "cors";
 import { stripeRouter } from "./stripe";
 import { paypalRouter } from "./paypal";
 import { lemonSqueezyRouter } from "./lemonsqueezy";
+import { paddleRouter } from "./paddle";
+import { payoneerRouter } from "./payoneer";
 import { subscriptionRouter } from "./subscription-status";
 
 const app = express();
@@ -20,6 +22,8 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/stripe", stripeRouter);
 app.use("/api/paypal", paypalRouter);
 app.use("/api/lemonsqueezy", lemonSqueezyRouter);
+app.use("/api/paddle", paddleRouter);
+app.use("/api/payoneer", payoneerRouter);
 app.use("/api/subscription-status", subscriptionRouter);
 
 function detectProviders() {
@@ -27,6 +31,8 @@ function detectProviders() {
   if (process.env.STRIPE_SECRET_KEY?.startsWith("sk_")) providers.push("stripe");
   if (process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET) providers.push("paypal");
   if (process.env.LEMONSQUEEZY_API_KEY) providers.push("lemonsqueezy");
+  if (process.env.PADDLE_API_KEY) providers.push("paddle");
+  if (process.env.PAYONEER_CLIENT_ID && process.env.PAYONEER_CLIENT_SECRET) providers.push("payoneer");
   return providers;
 }
 

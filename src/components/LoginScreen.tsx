@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Sparkles, Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
@@ -17,26 +17,48 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [honeypot, setHoneypot] = useState("");
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
   const [emailLoading, setEmailLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [emailError, setEmailError] = useState("");
+  const [authError, setAuthError] = useState("");
+  const loadTime = useRef(Date.now());
+
+  useEffect(() => {
+    loadTime.current = Date.now();
+  }, [authMode]);
 
   const signInWith = async (provider: "google" | "github") => {
+    if (Date.now() - loadTime.current < 2000) return;
+    setAuthError("");
     setLoading(provider);
     const sb = getSupabase();
     if (!sb) return;
-    await sb.auth.signInWithOAuth({
+    const { error } = await sb.auth.signInWithOAuth({
       provider,
       options: { redirectTo: getRedirectUrl() },
     });
+    if (error) setAuthError(error.message);
     setLoading(null);
   };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    setAuthError("");
     setEmailError("");
     setEmailSent(false);
+
+    if (honeypot) {
+      setAuthError("Bot detected");
+      return;
+    }
+
+    if (Date.now() - loadTime.current < 2000) {
+      setAuthError("Please wait before submitting");
+      return;
+    }
+
     if (!email.trim()) { setEmailError("Enter your email"); return; }
     if (!password.trim()) { setEmailError("Enter a password"); return; }
     const sb = getSupabase();
@@ -97,6 +119,10 @@ export default function LoginScreen() {
             {authMode === "signin" ? "Sign in to continue" : "Start learning"}
           </p>
 
+          {authError && (
+            <p className="text-sm text-red-500 font-semibold mb-4">{authError}</p>
+          )}
+
           {/* OAuth */}
           <div className="space-y-3">
             <button
@@ -142,6 +168,17 @@ export default function LoginScreen() {
             </div>
           ) : (
             <form onSubmit={handleEmailAuth} className="space-y-3">
+              <div className="absolute opacity-0 pointer-events-none" aria-hidden="true">
+                <input
+                  type="text"
+                  name="website"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  value={honeypot}
+                  onChange={(e) => setHoneypot(e.target.value)}
+                />
+              </div>
+
               <input
                 type="email"
                 value={email}
@@ -171,7 +208,7 @@ export default function LoginScreen() {
 
               <button
                 type="button"
-                onClick={() => { setAuthMode(authMode === "signin" ? "signup" : "signin"); setEmailError(""); }}
+                onClick={() => { setAuthMode(authMode === "signin" ? "signup" : "signin"); setAuthError(""); setEmailError(""); }}
                 className="w-full text-center text-sm text-muted hover:text-foreground transition-colors"
               >
                 {authMode === "signin" ? "No account? Sign up" : "Have an account? Sign in"}

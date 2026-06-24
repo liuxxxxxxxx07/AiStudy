@@ -20,6 +20,7 @@ import { SYSTEM_PROMPTS } from "@/lib/prompts";
 import { INTENSITY_MODELS, VISION_MODEL, MODE_COST, MODEL_CREDIT_COST, MEDIUM_MODELS, HARD_MODELS, EXTREME_MERGE_MODEL, CROSS_VALIDATION_MODELS, TIER_ACCESS } from "@/lib/puter";
 import { addQuestion, getQuestionBank, Question } from "@/lib/examEngine";
 import { getCreditData, getAvailableCredits, deductCredits, hasEnoughCredits } from "@/lib/credits";
+import { createCheckoutSession } from "@/lib/payment-client";
 import { analyzeQuestion } from "@/lib/questionAnalyzer";
 import { addKnowledgeEntry } from "@/lib/knowledgeBase";
 import { saveToBackend, loadFromBackend } from "@/lib/backend";
@@ -215,7 +216,8 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
         { role: "system", content: "Analyze the image(s) provided. If there is text, extract it. If it's a diagram or formula, describe it in detail. Respond in Chinese if the user writes in Chinese." },
         { role: "user", content: parts },
       ],
-      { model: VISION_MODEL }
+      { model: VISION_MODEL },
+      userId
     );
     return response || "无法识别图片内容";
   }, []);
@@ -311,7 +313,7 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
         for (let i = 0; i < models.length; i++) {
           setStatusText(`交叉验证中 (Model ${i + 1}/${models.length})...`);
           if (abortRef.current?.signal.aborted) break;
-          const text = await chatCompletion(apiMessages, { model: models[i], signal: abortRef.current?.signal });
+          const text = await chatCompletion(apiMessages, { model: models[i], signal: abortRef.current?.signal }, userId);
           responses.push(text || "");
         }
 
@@ -322,7 +324,8 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
             { role: "system", content: "You are a result merger. Combine the following AI responses into one comprehensive, coherent answer. Remove duplicates, highlight consensus, and note any differences." },
             { role: "user", content: `${responseList}\n\nCombine these into one answer:` },
           ],
-          { model: EXTREME_MERGE_MODEL, signal: abortRef.current?.signal }
+          { model: EXTREME_MERGE_MODEL, signal: abortRef.current?.signal },
+          userId
         );
         for await (const part of mergeStream) {
           if (abortRef.current?.signal.aborted) break;
@@ -337,7 +340,7 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
         }
       } else if (resolvedIntensity === "hard" && isPaidTier) {
         setStatusText("AI 回答中...");
-        const stream = streamCompletion(apiMessages, { model: effectiveModel, signal: abortRef.current?.signal });
+        const stream = streamCompletion(apiMessages, { model: effectiveModel, signal: abortRef.current?.signal }, userId);
         let accumulated = "";
         let reasoningAccumulated = "";
         for await (const part of stream) {
@@ -355,7 +358,7 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
         finalContent = accumulated;
       } else {
         setStatusText("AI 回答中...");
-        const stream = streamCompletion(apiMessages, { model: effectiveModel, signal: abortRef.current?.signal });
+        const stream = streamCompletion(apiMessages, { model: effectiveModel, signal: abortRef.current?.signal }, userId);
         let accumulated = "";
         let reasoningAccumulated = "";
         for await (const part of stream) {
@@ -386,7 +389,8 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
         try {
           const generatedTitle = await chatCompletion(
             [{ role: "user", content: `Generate a concise title (max 6 words, in Chinese if the user's message is Chinese) for this conversation based on this first user message: "${content}". Return ONLY the title, no quotes or extra text.` }],
-            { model: VISION_MODEL, signal: abortRef.current?.signal }
+            { model: VISION_MODEL, signal: abortRef.current?.signal },
+            userId
           );
           if (generatedTitle) {
             const cleanTitle = generatedTitle.replace(/^["']|["']$/g, "").trim().slice(0, 40);
@@ -440,6 +444,21 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
   }, [currentConv, handleSaveToBank]);
 
   const handleUpgrade = useCallback(() => setShowUpgrade(true), []);
+
+  const handleUpgradeSelect = useCallback(async (tierId: string) => {
+    setShowUpgrade(false);
+    try {
+      const checkout = await createCheckoutSession({
+        tier: tierId,
+        userId,
+        userEmail: user?.email as string | undefined,
+        provider: "paddle",
+      });
+      if (checkout.url) window.location.href = checkout.url;
+    } catch {
+      setShowUpgrade(true);
+    }
+  }, [userId, user?.email]);
 
   const allQuestions: Question[] = getQuestionBank();
 
@@ -649,7 +668,7 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
         </div>
       )}
 
-      {showUpgrade && <UpgradeModal onBack={() => setShowUpgrade(false)} onSelect={() => {}} userId={userId} userEmail={user?.email as string | undefined} currentTier={creditTier} />}
+      {showUpgrade && <UpgradeModal onBack={() => setShowUpgrade(false)} onSelect={handleUpgradeSelect} userId={userId} userEmail={user?.email as string | undefined} currentTier={creditTier} />}
     </div>
   );
 }

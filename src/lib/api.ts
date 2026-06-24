@@ -1,7 +1,4 @@
-"use client";
-
-const API_BASE = "https://openrouter.ai/api/v1";
-const API_KEY = process.env.NEXT_PUBLIC_OPENROUTER_API_KEY;
+const API_ENDPOINT = "/api/chat";
 
 interface ChatMessage {
   role: "system" | "user" | "assistant";
@@ -18,22 +15,18 @@ interface StreamChunk {
   reasoning?: string;
 }
 
-async function request(messages: ChatMessage[], options: ChatOptions & { stream: boolean }): Promise<Response> {
-  const body = {
-    model: options.model,
-    messages,
-    stream: options.stream,
-  };
+async function request(messages: ChatMessage[], options: ChatOptions & { stream: boolean }, userId?: string): Promise<Response> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (userId) headers["x-user-id"] = userId;
 
-  const response = await fetch(`${API_BASE}/chat/completions`, {
+  const response = await fetch(API_ENDPOINT, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${API_KEY}`,
-      "HTTP-Referer": typeof window !== "undefined" ? window.location.origin : "",
-      "X-Title": "AI Study",
-    },
-    body: JSON.stringify(body),
+    headers,
+    body: JSON.stringify({
+      model: options.model,
+      messages,
+      stream: options.stream,
+    }),
     signal: options.signal,
   });
 
@@ -47,18 +40,20 @@ async function request(messages: ChatMessage[], options: ChatOptions & { stream:
 
 export async function chatCompletion(
   messages: ChatMessage[],
-  options: ChatOptions
+  options: ChatOptions,
+  userId?: string
 ): Promise<string> {
-  const response = await request(messages, { ...options, stream: false });
+  const response = await request(messages, { ...options, stream: false }, userId);
   const json = await response.json();
   return json.choices?.[0]?.message?.content || "";
 }
 
 export async function* streamCompletion(
   messages: ChatMessage[],
-  options: ChatOptions
+  options: ChatOptions,
+  userId?: string
 ): AsyncGenerator<StreamChunk> {
-  const response = await request(messages, { ...options, stream: true });
+  const response = await request(messages, { ...options, stream: true }, userId);
 
   const reader = response.body!.getReader();
   const decoder = new TextDecoder();
