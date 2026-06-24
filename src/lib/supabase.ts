@@ -150,3 +150,8 @@ export function getSupabase(): SupabaseClient | null {
   }
   return _client;
 }
+
+export function getFreshSupabase(): SupabaseClient | null {
+  _client = undefined;
+  return getSupabase();
+}

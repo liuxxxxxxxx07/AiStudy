@@ -27,14 +27,17 @@ values (
 on conflict (id) do nothing;
 
 -- RLS: users can only access their own files
+drop policy if exists "Users can read own files" on storage.objects;
 create policy "Users can read own files"
   on storage.objects for select
   using (bucket_id = 'user-files' and auth.role() = 'authenticated' and (storage.foldername(name))[1] = auth.uid()::text);
 
+drop policy if exists "Users can upload own files" on storage.objects;
 create policy "Users can upload own files"
   on storage.objects for insert
   with check (bucket_id = 'user-files' and auth.role() = 'authenticated' and (storage.foldername(name))[1] = auth.uid()::text);
 
+drop policy if exists "Users can delete own files" on storage.objects;
 create policy "Users can delete own files"
   on storage.objects for delete
   using (bucket_id = 'user-files' and auth.role() = 'authenticated' and (storage.foldername(name))[1] = auth.uid()::text);

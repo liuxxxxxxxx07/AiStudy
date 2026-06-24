@@ -19,10 +19,12 @@ create table if not exists public.profiles (
 
 alter table public.profiles enable row level security;
 
+drop policy if exists "Users can view own profile" on public.profiles;
 create policy "Users can view own profile"
   on public.profiles for select
   using (auth.uid() = id);
 
+drop policy if exists "Users can update own profile" on public.profiles;
 create policy "Users can update own profile"
   on public.profiles for update
   using (auth.uid() = id);
@@ -61,10 +63,12 @@ create table if not exists public.credits (
 
 alter table public.credits enable row level security;
 
+drop policy if exists "Users can view own credits" on public.credits;
 create policy "Users can view own credits"
   on public.credits for select
   using (auth.uid() = user_id);
 
+drop policy if exists "Users can update own credits" on public.credits;
 create policy "Users can update own credits"
   on public.credits for update
   using (auth.uid() = user_id);
@@ -100,10 +104,12 @@ create table if not exists public.subscriptions (
 
 alter table public.subscriptions enable row level security;
 
+drop policy if exists "Users can view own subscriptions" on public.subscriptions;
 create policy "Users can view own subscriptions"
   on public.subscriptions for select
   using (auth.uid() = user_id);
 
+drop policy if exists "Service role can manage subscriptions" on public.subscriptions;
 create policy "Service role can manage subscriptions"
   on public.subscriptions for all
   using (auth.role() = 'service_role');
@@ -120,6 +126,7 @@ create table if not exists public.conversations (
 
 alter table public.conversations enable row level security;
 
+drop policy if exists "Users can CRUD own conversations" on public.conversations;
 create policy "Users can CRUD own conversations"
   on public.conversations for all
   using (auth.uid() = user_id);
@@ -139,6 +146,7 @@ create table if not exists public.messages (
 
 alter table public.messages enable row level security;
 
+drop policy if exists "Users can CRUD own messages" on public.messages;
 create policy "Users can CRUD own messages"
   on public.messages for all
   using (
@@ -168,6 +176,7 @@ create table if not exists public.questions (
 
 alter table public.questions enable row level security;
 
+drop policy if exists "Users can CRUD own questions" on public.questions;
 create policy "Users can CRUD own questions"
   on public.questions for all
   using (auth.uid() = user_id);
@@ -189,6 +198,7 @@ create table if not exists public.exam_results (
 
 alter table public.exam_results enable row level security;
 
+drop policy if exists "Users can CRUD own exam results" on public.exam_results;
 create policy "Users can CRUD own exam results"
   on public.exam_results for all
   using (auth.uid() = user_id);
@@ -210,6 +220,7 @@ create table if not exists public.knowledge_entries (
 
 alter table public.knowledge_entries enable row level security;
 
+drop policy if exists "Users can CRUD own knowledge entries" on public.knowledge_entries;
 create policy "Users can CRUD own knowledge entries"
   on public.knowledge_entries for all
   using (auth.uid() = user_id);
@@ -229,6 +240,7 @@ create table if not exists public.wiki_entries (
 
 alter table public.wiki_entries enable row level security;
 
+drop policy if exists "Users can CRUD own wiki entries" on public.wiki_entries;
 create policy "Users can CRUD own wiki entries"
   on public.wiki_entries for all
   using (auth.uid() = user_id);
@@ -245,6 +257,7 @@ create table if not exists public.wiki_links (
 
 alter table public.wiki_links enable row level security;
 
+drop policy if exists "Users can CRUD own wiki links" on public.wiki_links;
 create policy "Users can CRUD own wiki links"
   on public.wiki_links for all
   using (
