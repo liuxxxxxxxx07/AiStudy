@@ -4,14 +4,9 @@ import { useState, useEffect, useCallback } from "react";
 import { User } from "@supabase/supabase-js";
 import AppShell from "@/components/AppShell";
 import LoginScreen from "@/components/LoginScreen";
-import PaymentPlans from "@/components/PaymentPlans";
-import { getCreditData } from "@/lib/credits";
 import { getSupabase } from "@/lib/supabase";
 
-type Page = "app" | "login" | "plans";
-
 export default function Home() {
-  const [page, setPage] = useState<Page>("login");
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -25,7 +20,6 @@ export default function Home() {
     sb.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser(session.user);
-        setPage("app");
       }
       setLoading(false);
     });
@@ -34,10 +28,8 @@ export default function Home() {
       (_event, session) => {
         if (session?.user) {
           setUser(session.user);
-          setPage("app");
         } else {
           setUser(null);
-          setPage("login");
         }
       }
     );
@@ -49,15 +41,7 @@ export default function Home() {
     const sb = getSupabase();
     if (sb) await sb.auth.signOut();
     setUser(null);
-    setPage("login");
   }, []);
-
-  const handlePlans = useCallback(() => setPage("plans"), []);
-  const handleBackFromPlans = useCallback(() => setPage("login"), []);
-
-  const userId = user?.id || user?.email || "";
-  const userEmail = user?.email || undefined;
-  const currentTier = userId ? getCreditData(userId).tier : "free";
 
   if (loading) {
     return (
@@ -67,20 +51,21 @@ export default function Home() {
     );
   }
 
-  if (page === "login") {
-    return <LoginScreen onPlans={handlePlans} />;
+  if (!user) {
+    return <LoginScreen />;
   }
 
-  if (page === "plans") {
-    return (
-      <PaymentPlans
-        onBack={handleBackFromPlans}
-        userId={userId}
-        userEmail={userEmail}
-        currentTier={currentTier}
-      />
-    );
-  }
+  const userId = user.id || user.email || "";
+  const userEmail = user.email || undefined;
 
-  return <AppShell user={user ? { id: userId, username: user.user_metadata?.full_name || user.email?.split("@")[0] || "User", email: userEmail } : null} onLogout={handleLogout} />;
+  return (
+    <AppShell
+      user={{
+        id: userId,
+        username: user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
+        email: userEmail,
+      }}
+      onLogout={handleLogout}
+    />
+  );
 }

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, StopCircle, PanelLeft, Coins, X } from "lucide-react";
+import { Send, StopCircle, PanelLeft, Coins, X, Sparkles } from "lucide-react";
 import TextareaAutosize from "react-textarea-autosize";
+import { useRouter } from "next/navigation";
 import MessageBubble, { Message } from "./MessageBubble";
 import Sidebar, { AppMode, MODE_LABEL } from "./Sidebar";
 import ImageUploader from "./ImageUploader";
@@ -46,6 +47,7 @@ const TIER_NAMES: Record<string, string> = {
 };
 
 export default function AppShell({ user, onLogout }: { user: Record<string, unknown> | null; onLogout: () => void }) {
+  const router = useRouter();
   const userId = (user?.id as string) || (user?.username as string) || "anonymous";
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentId, setCurrentId] = useState<string | null>(null);
@@ -491,6 +493,13 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => router.push("/pricing")}
+              className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md bg-input-bg border border-input-border text-muted hover:text-foreground transition-colors"
+            >
+              <Sparkles className="w-3 h-3" />
+              Plans
+            </button>
             {currentConv && messages.length > 0 && (
               <button
                 onClick={handleSaveLast}

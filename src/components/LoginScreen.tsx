@@ -2,11 +2,8 @@
 
 import { useState } from "react";
 import { Sparkles, Mail } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
-
-interface LoginScreenProps {
-  onPlans: () => void;
-}
 
 const getRedirectUrl = () => {
   if (typeof window !== "undefined") {
@@ -15,7 +12,8 @@ const getRedirectUrl = () => {
   return "/auth/callback";
 };
 
-export default function LoginScreen({ onPlans }: LoginScreenProps) {
+export default function LoginScreen() {
+  const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -184,7 +182,7 @@ export default function LoginScreen({ onPlans }: LoginScreenProps) {
           {/* Footer */}
           <div className="mt-6 text-center text-sm text-muted">
             50 free credits · Knowledge Base · Wiki · Flashcards · No credit card
-            <button onClick={onPlans} className="ml-1 text-foreground underline underline-offset-2 hover:text-muted transition-colors font-semibold">
+            <button onClick={() => router.push("/pricing")} className="ml-1 text-foreground underline underline-offset-2 hover:text-muted transition-colors font-semibold">
               Pricing
             </button>
           </div>
@@ -194,7 +192,7 @@ export default function LoginScreen({ onPlans }: LoginScreenProps) {
       {/* Pricing floating */}
       <div className="absolute top-5 right-5 z-10">
         <button
-          onClick={onPlans}
+          onClick={() => router.push("/pricing")}
           className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold text-muted hover:text-foreground border border-divider hover:border-foreground/20 transition-all"
         >
           <Sparkles className="w-3.5 h-3.5" />
