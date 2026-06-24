@@ -1,7 +1,7 @@
 "use client";
 
 const PAYMENT_SERVER_URL =
-  process.env.NEXT_PUBLIC_PAYMENT_SERVER_URL || "http://localhost:3001";
+  process.env.NEXT_PUBLIC_PAYMENT_SERVER_URL || "https://aistudy-production-d3da.up.railway.app";
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${PAYMENT_SERVER_URL}${path}`;
