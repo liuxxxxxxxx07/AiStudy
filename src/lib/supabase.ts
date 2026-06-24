@@ -1,7 +1,7 @@
 import { createClient, SupabaseClient, Session, AuthChangeEvent } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://pooifqbzwwmbkachgvmvu.supabase.co";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_FpgVNiRGDcosjVMqhZn-HQ_M8fXDb3E";
 
 export function isSupabaseConfigured(): boolean {
   return !!(supabaseUrl && supabaseAnonKey);
