@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Sparkles, Mail } from "lucide-react";
+import { Sparkles, Mail, Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
 
@@ -23,6 +23,7 @@ export default function LoginScreen() {
   const [emailSent, setEmailSent] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [authError, setAuthError] = useState("");
+  const [oauthConfirm, setOauthConfirm] = useState<"google" | "github" | null>(null);
   const loadTime = useRef(Date.now());
 
   useEffect(() => {
@@ -32,11 +33,36 @@ export default function LoginScreen() {
   const signInWith = async (provider: "google" | "github") => {
     if (Date.now() - loadTime.current < 2000) return;
     setAuthError("");
-    setLoading(provider);
+    const sb = getSupabase();
+    if (!sb) return;
+
+    const isRealSupabase = !!(
+      (typeof process !== "undefined" &&
+        process.env?.NEXT_PUBLIC_SUPABASE_URL &&
+        process.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+    );
+
+    if (isRealSupabase) {
+      setLoading(provider);
+      const { error } = await sb.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: getRedirectUrl() },
+      });
+      if (error) setAuthError(error.message);
+      setLoading(null);
+    } else {
+      setOauthConfirm(provider);
+    }
+  };
+
+  const confirmOAuth = async () => {
+    if (!oauthConfirm) return;
+    setOauthConfirm(null);
+    setLoading(oauthConfirm);
     const sb = getSupabase();
     if (!sb) return;
     const { error } = await sb.auth.signInWithOAuth({
-      provider,
+      provider: oauthConfirm,
       options: { redirectTo: getRedirectUrl() },
     });
     if (error) setAuthError(error.message);
@@ -244,6 +270,48 @@ export default function LoginScreen() {
           Pricing
         </button>
       </div>
+
+      {/* OAuth confirmation modal */}
+      {oauthConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-sm bg-background rounded-2xl border border-divider p-8 shadow-2xl">
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-5 rounded-full bg-white/5 border border-white/[0.08] flex items-center justify-center">
+                <Shield className="w-7 h-7 text-foreground/70" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground mb-2">
+                Authorize with {oauthConfirm === "google" ? "Google" : "GitHub"}
+              </h3>
+              <p className="text-sm text-muted mb-6">
+                This is a simulated OAuth authorization page. In production,
+                you would be redirected to {oauthConfirm === "google" ? "Google" : "GitHub"}&apos;s
+                authorization server.
+              </p>
+              <div className="border border-divider rounded-xl p-4 mb-6 bg-muted/5 text-left">
+                <p className="text-xs text-muted font-mono break-all">
+                  {oauthConfirm === "google"
+                    ? "https://accounts.google.com/o/oauth2/auth?client_id=..."
+                    : "https://github.com/login/oauth/authorize?client_id=..."}
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setOauthConfirm(null)}
+                  className="flex-1 h-12 rounded-xl border border-divider text-foreground text-base font-semibold hover:bg-muted/5 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmOAuth}
+                  className="flex-1 h-12 rounded-xl bg-foreground text-background text-base font-semibold hover:opacity-90 transition-opacity"
+                >
+                  Authorize
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
