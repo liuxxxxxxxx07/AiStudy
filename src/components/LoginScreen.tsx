@@ -20,7 +20,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [honeypot, setHoneypot] = useState("");
-  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signup");
   const [emailLoading, setEmailLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [emailError, setEmailError] = useState("");
@@ -147,7 +147,7 @@ export default function LoginScreen() {
           <p className="text-lg text-white/35 max-w-xs mx-auto leading-relaxed">
             Learning engine.
           </p>
-          <div className="mt-8 space-y-2 text-sm text-white/25">
+          <div className="mt-8 space-y-2 text-sm text-white/40">
             <p>AI problem solving</p>
             <p>Knowledge Base & Wiki</p>
             <p>Question Bank & Flashcards</p>
@@ -168,7 +168,7 @@ export default function LoginScreen() {
           <h2 className="text-2xl font-bold text-foreground tracking-tight mb-2">
             {authMode === "signin" ? "Welcome back" : "Create account"}
           </h2>
-          <p className="text-base text-muted mb-8">
+          <p className="text-base text-muted/80 mb-8">
             {authMode === "signin" ? "Sign in to continue" : "Start learning"}
           </p>
 
@@ -206,7 +206,7 @@ export default function LoginScreen() {
           {/* Divider */}
           <div className="my-6 flex items-center gap-3">
             <div className="h-px flex-1 bg-divider" />
-            <span className="text-sm text-muted">or</span>
+            <span className="text-base text-muted">or</span>
             <div className="h-px flex-1 bg-divider" />
           </div>
 
@@ -262,7 +262,7 @@ export default function LoginScreen() {
               <button
                 type="button"
                 onClick={() => { setAuthMode(authMode === "signin" ? "signup" : "signin"); setAuthError(""); setEmailError(""); }}
-                className="w-full text-center text-sm text-muted hover:text-foreground transition-colors"
+                className="w-full text-center text-base text-muted hover:text-foreground transition-colors"
               >
                 {authMode === "signin" ? "No account? Sign up" : "Have an account? Sign in"}
               </button>
@@ -270,14 +270,14 @@ export default function LoginScreen() {
           )}
 
           {/* Footer */}
-          <div className="mt-6 text-center text-sm text-muted">
+          <div className="mt-6 text-center text-base text-muted">
             50 free credits · Knowledge Base · Wiki · Flashcards · No credit card
             <button onClick={() => router.push("/pricing")} className="ml-1 text-foreground underline underline-offset-2 hover:text-muted transition-colors font-semibold">
               Pricing
             </button>
           </div>
 
-          <div className="mt-4 flex items-center justify-center gap-3 text-xs text-muted/40">
+          <div className="mt-4 flex items-center justify-center gap-3 text-sm text-muted/60">
             <button onClick={() => router.push("/terms")} className="hover:text-foreground transition-colors">Terms</button>
             <span>·</span>
             <button onClick={() => router.push("/privacy")} className="hover:text-foreground transition-colors">Privacy</button>
