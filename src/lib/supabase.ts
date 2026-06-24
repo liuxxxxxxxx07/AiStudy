@@ -3,6 +3,10 @@ import { createClient, SupabaseClient, Session, AuthChangeEvent } from "@supabas
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
+export function isSupabaseConfigured(): boolean {
+  return !!(supabaseUrl && supabaseAnonKey);
+}
+
 type AuthListener = (event: AuthChangeEvent, session: Session | null) => void;
 
 function createMockClient(): SupabaseClient {
@@ -24,8 +28,8 @@ function createMockClient(): SupabaseClient {
   };
 
   const client = createClient(
-    supabaseUrl || "https://dev-mode.supabase.co",
-    supabaseAnonKey || "dev-mode-key",
+    "https://dev-mode.supabase.co",
+    "dev-mode-key",
     {
       auth: {
         persistSession: false,
@@ -120,29 +124,29 @@ function createMockClient(): SupabaseClient {
   return client;
 }
 
-function createSupabaseClient(): SupabaseClient | null {
-  if (!supabaseUrl || !supabaseAnonKey) {
-    if (typeof window !== "undefined") {
-      console.warn(
-        "[Supabase] Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY. Using dev mock auth."
-      );
-    }
-    return createMockClient();
-  }
-  return createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      storage: typeof window !== "undefined" ? window.localStorage : undefined,
-    },
-  });
-}
-
 let _client: SupabaseClient | null | undefined;
 
 export function getSupabase(): SupabaseClient | null {
   if (_client === undefined) {
-    _client = createSupabaseClient();
+    if (isSupabaseConfigured()) {
+      if (typeof window !== "undefined") {
+        console.log("[Supabase] Using real Supabase client");
+      }
+      _client = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          storage: typeof window !== "undefined" ? window.localStorage : undefined,
+        },
+      });
+    } else {
+      if (typeof window !== "undefined") {
+        console.warn(
+          "[Supabase] Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY. Using dev mock auth."
+        );
+      }
+      _client = createMockClient();
+    }
   }
   return _client;
 }

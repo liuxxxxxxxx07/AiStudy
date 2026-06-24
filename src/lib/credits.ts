@@ -1,3 +1,5 @@
+import { isSupabaseConfigured } from "./supabase";
+
 interface CreditData {
   balance: number;
   lastResetMonth: string;
@@ -30,6 +32,14 @@ function getCreditData(userId: string): CreditData {
 
 function saveCreditData(userId: string, data: CreditData): void {
   localStorage.setItem(getStorageKey(userId), JSON.stringify(data));
+  syncCreditsToSupabase(userId, data);
+}
+
+function syncCreditsToSupabase(userId: string, data: CreditData): void {
+  if (!isSupabaseConfigured()) return;
+  import("./supabase-db").then(({ saveCredits }) => {
+    saveCredits(userId, data);
+  }).catch(() => {});
 }
 
 function setTier(userId: string, tier: "free" | "plus" | "pro" | "pro+"): void {

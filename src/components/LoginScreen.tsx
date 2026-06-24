@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Sparkles, Mail, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { getSupabase } from "@/lib/supabase";
+import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 
 const getRedirectUrl = () => {
   if (typeof window !== "undefined") {
@@ -37,22 +37,20 @@ export default function LoginScreen() {
     if (Date.now() - loadTime.current < 2000) return;
     setAuthError("");
 
-    const isRealSupabase = !!(
-      typeof process !== "undefined" &&
-      process.env?.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    );
+    const isRealSupabase = isSupabaseConfigured();
 
     if (isRealSupabase) {
       setLoading(provider);
       const sb = getSupabase();
       if (!sb) return;
-      const { error } = await sb.auth.signInWithOAuth({
+      const { data, error } = await sb.auth.signInWithOAuth({
         provider,
         options: { redirectTo: getRedirectUrl() },
       });
-      if (error) setAuthError(error.message);
-      setLoading(null);
+      if (error) {
+        setAuthError(error.message);
+        setLoading(null);
+      }
     } else {
       setOauthProvider(provider);
       setOauthStep("redirecting");
@@ -65,16 +63,30 @@ export default function LoginScreen() {
     if (!oauthProvider) return;
     setOauthStep("callback");
     await new Promise((r) => setTimeout(r, 800));
-    const sb = getSupabase();
-    if (!sb) { setAuthError("Auth unavailable"); setOauthProvider(null); return; }
-    setLoading(oauthProvider);
-    const { error } = await sb.auth.signInWithOAuth({
-      provider: oauthProvider,
-      options: { redirectTo: getRedirectUrl() },
-    });
-    if (error) setAuthError(error.message);
-    setLoading(null);
-    setOauthProvider(null);
+    if (isSupabaseConfigured()) {
+      const sb = getSupabase();
+      if (!sb) { setAuthError("Auth unavailable"); setOauthProvider(null); return; }
+      setLoading(oauthProvider);
+      const { data, error } = await sb.auth.signInWithOAuth({
+        provider: oauthProvider,
+        options: { redirectTo: getRedirectUrl() },
+      });
+      if (error) {
+        setAuthError(error.message);
+        setLoading(null);
+      }
+    } else {
+      const sb = getSupabase();
+      if (!sb) { setAuthError("Auth unavailable"); setOauthProvider(null); return; }
+      setLoading(oauthProvider);
+      const { error } = await sb.auth.signInWithOAuth({
+        provider: oauthProvider,
+        options: { redirectTo: getRedirectUrl() },
+      });
+      if (error) setAuthError(error.message);
+      setLoading(null);
+      setOauthProvider(null);
+    }
   };
 
   const cancelOAuth = () => {

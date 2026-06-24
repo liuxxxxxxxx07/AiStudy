@@ -15,15 +15,23 @@ export default function AuthCallback() {
         setStatus("Supabase not configured");
         return;
       }
-      const { data, error } = await sb.auth.exchangeCodeForSession(
-        window.location.href
-      );
+
+      const url = window.location.href;
+
+      const { data, error } = await sb.auth.exchangeCodeForSession(url);
       if (error) {
         setStatus(`Authentication failed: ${error.message}`);
         return;
       }
       if (data.session) {
         router.replace("/");
+      } else {
+        const { data: sessionCheck } = await sb.auth.getSession();
+        if (sessionCheck.session) {
+          router.replace("/");
+        } else {
+          setStatus("No session created. Please try signing in again.");
+        }
       }
     };
     handleCallback();
