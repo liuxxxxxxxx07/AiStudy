@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { User } from "@supabase/supabase-js";
 import AppShell from "@/components/AppShell";
 import LoginScreen from "@/components/LoginScreen";
-import Onboarding, { PRE_LOGIN_SLIDES, POST_LOGIN_SLIDES } from "@/components/Onboarding";
+import Onboarding from "@/components/Onboarding";
 import { getSupabase } from "@/lib/supabase";
 
 const PRE_LOGIN_KEY = "ai-study-onboarding-pre-done";
@@ -101,9 +101,8 @@ export default function Home() {
     <>
       {showPreLogin && (
         <Onboarding
-          slides={PRE_LOGIN_SLIDES}
-          onComplete={handlePreLoginDone}
           doneKey="pre-login"
+          onComplete={handlePreLoginDone}
         />
       )}
 
@@ -121,9 +120,8 @@ export default function Home() {
           />
           {showPostLogin && (
             <Onboarding
-              slides={POST_LOGIN_SLIDES}
-              onComplete={handlePostLoginDone}
               doneKey="post-login"
+              onComplete={handlePostLoginDone}
             />
           )}
         </>

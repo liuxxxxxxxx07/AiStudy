@@ -2,6 +2,7 @@
 
 import { ThemeProvider } from "next-themes";
 import { useEffect, useState } from "react";
+import { I18nProvider } from "@/lib/i18n";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
@@ -12,7 +13,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-      {mounted ? children : <div className="h-full bg-background" />}
+      <I18nProvider>
+        {mounted ? children : <div className="h-full bg-background" />}
+      </I18nProvider>
     </ThemeProvider>
   );
 }

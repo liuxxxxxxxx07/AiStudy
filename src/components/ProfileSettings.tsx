@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { X, User, Coins, Sun, Moon, LogOut, Sparkles, ExternalLink, Check, Pencil, Loader2 } from "lucide-react";
+import { X, User, Coins, Sun, Moon, LogOut, Sparkles, ExternalLink, Check, Pencil, Loader2, Languages } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useI18n, LOCALE_NAMES, type SupportedLocale } from "@/lib/i18n";
 import { updateProfile } from "@/lib/supabase-db";
 
 const PROFILE_DISPLAY_KEY = "ai-study-profile-display";
@@ -60,6 +61,7 @@ export default function ProfileSettings({
   onLogout: () => void;
   onUpgrade: () => void;
 }) {
+  const { t, locale, setLocale } = useI18n();
   const { theme, setTheme } = useTheme();
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState("");
@@ -83,13 +85,19 @@ export default function ProfileSettings({
   const displayName_ = displayName || userName;
   const tierLabel: Record<string, string> = { free: "Free", plus: "Plus", pro: "Pro", "pro+": "Pro+" };
 
+  const cycleLocale = useCallback(() => {
+    const locales: SupportedLocale[] = ["en", "zh"];
+    const idx = locales.indexOf(locale);
+    setLocale(locales[(idx + 1) % locales.length]);
+  }, [locale, setLocale]);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="bg-card border border-input-border rounded-2xl shadow-2xl w-full max-w-md animate-fade-in overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-card-border">
           <div className="flex items-center gap-2">
             <User className="w-5 h-5 text-muted" />
-            <h1 className="text-lg font-semibold">Profile & Settings</h1>
+            <h1 className="text-lg font-semibold">{t("profile.title")}</h1>
           </div>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-hover-bg text-muted transition-colors">
             <X className="w-5 h-5" />
@@ -97,7 +105,6 @@ export default function ProfileSettings({
         </div>
 
         <div className="p-6 space-y-6">
-          {/* Avatar + Name */}
           <div className="flex items-center gap-4">
             <div className={`w-14 h-14 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${getAvatarColor(displayName_)}`}>
               {getInitials(displayName_)}
@@ -109,7 +116,7 @@ export default function ProfileSettings({
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                     className="flex-1 bg-input-bg border border-input-border rounded-lg px-3 py-1.5 text-sm text-foreground outline-none focus:border-foreground/30"
-                    placeholder="Display name"
+                    placeholder={t("profile.displayName")}
                     autoFocus
                     onKeyDown={(e) => e.key === "Enter" && handleSaveName()}
                   />
@@ -129,12 +136,11 @@ export default function ProfileSettings({
             </div>
           </div>
 
-          {/* Credits & Tier */}
           <div className="rounded-xl border border-input-border bg-input-bg/50 p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Coins className="w-4 h-4 text-amber-500" />
-                <span className="text-sm font-medium">Credits</span>
+                <span className="text-sm font-medium">{t("sidebar.credits")}</span>
               </div>
               <span className={`px-2 py-0.5 text-[10px] font-semibold rounded border ${
                 tier === "free" ? "border-muted/30 bg-muted/10 text-muted" : "border-blue-500/30 bg-blue-500/20 text-blue-400"
@@ -144,57 +150,47 @@ export default function ProfileSettings({
             </div>
             <div className="flex items-baseline gap-1">
               <span className="text-2xl font-bold">{credits.toLocaleString()}</span>
-              <span className="text-xs text-muted">credits remaining</span>
+              <span className="text-xs text-muted">{t("credits.creditsRemaining")}</span>
             </div>
             <button onClick={onUpgrade} className="mt-3 w-full py-2 rounded-lg text-xs font-medium bg-foreground text-background hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5" />
-              {tier === "free" ? "Upgrade Plan" : "Manage Plan"}
+              {tier === "free" ? t("credits.upgradePlan") : t("credits.managePlan")}
             </button>
           </div>
 
-          {/* Preferences */}
           <div>
-            <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Preferences</h3>
+            <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">{t("profile.preferences")}</h3>
             <div className="space-y-1">
-              <button
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-foreground/80 hover:bg-hover-bg transition-colors"
-              >
+              <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-foreground/80 hover:bg-hover-bg transition-colors">
                 {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                {theme === "dark" ? "Light Mode" : "Dark Mode"}
+                {theme === "dark" ? t("sidebar.lightMode") : t("sidebar.darkMode")}
                 <span className="ml-auto text-xs text-muted">{theme === "dark" ? "🌙" : "☀️"}</span>
               </button>
+              <button onClick={cycleLocale} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-foreground/80 hover:bg-hover-bg transition-colors">
+                <Languages className="w-4 h-4" />
+                {LOCALE_NAMES[locale] === "English" ? "English" : "中文"}
+                <span className="ml-auto text-xs text-muted">{LOCALE_NAMES[locale === "en" ? "zh" : "en"]}</span>
+              </button>
             </div>
           </div>
 
-          {/* Account */}
           <div>
-            <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Account</h3>
+            <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">{t("profile.account")}</h3>
             <div className="space-y-1">
-              <button
-                onClick={onUpgrade}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-foreground/80 hover:bg-hover-bg transition-colors"
-              >
+              <button onClick={onUpgrade} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-foreground/80 hover:bg-hover-bg transition-colors">
                 <Sparkles className="w-4 h-4 text-amber-500" />
-                Subscription & Billing
+                {t("profile.subscriptionBilling")}
                 <ExternalLink className="w-3 h-3 ml-auto text-muted" />
               </button>
-              <button
-                onClick={() => {
-                  onClose();
-                  onLogout();
-                }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-red-500 hover:bg-red-500/10 transition-colors"
-              >
+              <button onClick={() => { onClose(); onLogout(); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-red-500 hover:bg-red-500/10 transition-colors">
                 <LogOut className="w-4 h-4" />
-                Sign Out
+                {t("profile.signOut")}
               </button>
             </div>
           </div>
 
-          {/* App info */}
           <div className="text-center text-[10px] text-muted/40 pt-2 border-t border-divider">
-            AI Study v0.1.0
+            {t("app.version")}
           </div>
         </div>
       </div>
@@ -202,4 +198,4 @@ export default function ProfileSettings({
   );
 }
 
-export { getStoredProfile, saveStoredProfile, getInitials, getAvatarColor };
+export { getInitials, getAvatarColor };

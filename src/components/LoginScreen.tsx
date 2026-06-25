@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Sparkles, Mail, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
+import { useI18n } from "@/lib/i18n";
 
 const getRedirectUrl = () => {
   if (typeof window !== "undefined") {
@@ -15,6 +16,7 @@ const getRedirectUrl = () => {
 type OAuthStep = "redirecting" | "consent" | "callback";
 
 export default function LoginScreen() {
+  const { t } = useI18n();
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [email, setEmail] = useState("");
@@ -148,10 +150,10 @@ export default function LoginScreen() {
             Learning engine.
           </p>
           <div className="mt-8 space-y-2 text-sm text-white/40">
-            <p>AI problem solving</p>
-            <p>Knowledge Base & Wiki</p>
-            <p>Question Bank & Flashcards</p>
-            <p>Mock Exam & Deep Search</p>
+            <p>{t("login.features")}</p>
+            <p>{t("login.knowledgeBase")}</p>
+            <p>{t("login.questionBank")}</p>
+            <p>{t("login.mockExam")}</p>
           </div>
         </div>
       </div>
@@ -166,10 +168,10 @@ export default function LoginScreen() {
           </div>
 
           <h2 className="text-2xl font-bold text-foreground tracking-tight mb-2">
-            {authMode === "signin" ? "Welcome back" : "Create account"}
+            {authMode === "signin" ? t("auth.welcomeBack") : t("auth.createAccount")}
           </h2>
           <p className="text-base text-muted/80 mb-8">
-            {authMode === "signin" ? "Sign in to continue" : "Start learning"}
+            {authMode === "signin" ? t("auth.signInToContinue") : t("auth.startLearning")}
           </p>
 
           {authError && (
@@ -216,8 +218,8 @@ export default function LoginScreen() {
               <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-3">
                 <Mail className="w-5 h-5 text-emerald-500" />
               </div>
-              <p className="text-base font-semibold text-foreground mb-1">Check your email</p>
-              <p className="text-sm text-muted">Confirmation sent to {email}</p>
+<p className="text-base font-semibold text-foreground mb-1">{t("auth.checkEmail")}</p>
+                  <p className="text-sm text-muted">{t("auth.confirmationSent", { email })}</p>
             </div>
           ) : (
             <form onSubmit={handleEmailAuth} className="space-y-3">
@@ -236,14 +238,14 @@ export default function LoginScreen() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email"
+                placeholder={t("auth.email")}
                 className="w-full h-12 rounded-xl border border-divider bg-transparent px-4 text-base text-foreground placeholder:text-muted/40 outline-none focus:border-foreground/30 transition-colors"
               />
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
+                placeholder={t("auth.password")}
                 className="w-full h-12 rounded-xl border border-divider bg-transparent px-4 text-base text-foreground placeholder:text-muted/40 outline-none focus:border-foreground/30 transition-colors"
               />
 
@@ -256,7 +258,7 @@ export default function LoginScreen() {
                 disabled={emailLoading}
                 className="w-full h-12 rounded-xl bg-foreground text-background text-base font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
               >
-                {emailLoading ? "Please wait..." : authMode === "signin" ? "Sign in" : "Create account"}
+                {emailLoading ? t("auth.pleaseWait") : authMode === "signin" ? t("auth.signIn") : t("auth.signUp")}
               </button>
 
               <button
@@ -264,25 +266,25 @@ export default function LoginScreen() {
                 onClick={() => { setAuthMode(authMode === "signin" ? "signup" : "signin"); setAuthError(""); setEmailError(""); }}
                 className="w-full text-center text-base text-muted hover:text-foreground transition-colors"
               >
-                {authMode === "signin" ? "No account? Sign up" : "Have an account? Sign in"}
+                {authMode === "signin" ? t("auth.noAccount") : t("auth.hasAccount")}
               </button>
             </form>
           )}
 
           {/* Footer */}
           <div className="mt-6 text-center text-base text-muted">
-            50 free credits · Knowledge Base · Wiki · Flashcards · No credit card
+            {t("login.freeCredits")}
             <button onClick={() => router.push("/pricing")} className="ml-1 text-foreground underline underline-offset-2 hover:text-muted transition-colors font-semibold">
-              Pricing
+{t("login.pricing")}
             </button>
           </div>
 
           <div className="mt-4 flex items-center justify-center gap-3 text-sm text-muted/60">
-            <button onClick={() => router.push("/terms")} className="hover:text-foreground transition-colors">Terms</button>
+            <button onClick={() => router.push("/terms")} className="hover:text-foreground transition-colors">{t("common.terms")}</button>
             <span>·</span>
-            <button onClick={() => router.push("/privacy")} className="hover:text-foreground transition-colors">Privacy</button>
+            <button onClick={() => router.push("/privacy")} className="hover:text-foreground transition-colors">{t("common.privacy")}</button>
             <span>·</span>
-            <button onClick={() => router.push("/refund")} className="hover:text-foreground transition-colors">Refund</button>
+            <button onClick={() => router.push("/refund")} className="hover:text-foreground transition-colors">{t("common.refund")}</button>
           </div>
         </div>
 
@@ -292,7 +294,7 @@ export default function LoginScreen() {
             {oauthStep === "redirecting" && (
               <div className="flex flex-col items-center gap-4">
                 <Loader2 className="w-8 h-8 text-white animate-spin" />
-                <p className="text-white/80 text-sm">Redirecting to {oauthLabel}...</p>
+                <p className="text-white/80 text-sm">{t("auth.redirectingTo", { provider: oauthLabel })}</p>
               </div>
             )}
 
@@ -313,15 +315,15 @@ export default function LoginScreen() {
                       </svg>
                     )}
                   </div>
-                  <h3 className="text-xl font-bold text-foreground mb-1">Sign in with {oauthLabel}</h3>
+                  <h3 className="text-xl font-bold text-foreground mb-1">{t("auth.signInWith", { provider: oauthLabel })}</h3>
                   <p className="text-sm text-muted mb-6">
-                    STEM would like to access your {oauthLabel} account profile information
+                    {t("auth.wouldLikeToAccess", { provider: oauthLabel })}
                   </p>
 
                   <div className="border border-divider rounded-xl p-4 mb-6 bg-muted/5 text-left text-xs text-muted space-y-2">
-                    <p className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-muted" /> View your email address</p>
-                    <p className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-muted" /> View your profile name</p>
-                    <p className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-muted" /> View your avatar</p>
+                    <p className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-muted" /> {t("auth.viewEmail")}</p>
+                    <p className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-muted" /> {t("auth.viewName")}</p>
+                    <p className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-muted" /> {t("auth.viewAvatar")}</p>
                   </div>
 
                   <div className="flex gap-3">
@@ -329,13 +331,13 @@ export default function LoginScreen() {
                       onClick={cancelOAuth}
                       className="flex-1 h-12 rounded-xl border border-divider text-foreground text-base font-semibold hover:bg-muted/5 transition-all"
                     >
-                      Cancel
+                      {t("auth.cancel")}
                     </button>
                     <button
                       onClick={confirmOAuth}
                       className="flex-1 h-12 rounded-xl bg-foreground text-background text-base font-semibold hover:opacity-90 transition-opacity"
                     >
-                      Allow
+                      {t("auth.allow")}
                     </button>
                   </div>
                 </div>
@@ -345,7 +347,7 @@ export default function LoginScreen() {
             {oauthStep === "callback" && (
               <div className="flex flex-col items-center gap-4">
                 <Loader2 className="w-8 h-8 text-white animate-spin" />
-                <p className="text-white/80 text-sm">Completing authentication...</p>
+                <p className="text-white/80 text-sm">{t("auth.completingAuth")}</p>
               </div>
             )}
           </div>
@@ -359,7 +361,7 @@ export default function LoginScreen() {
           className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold text-muted hover:text-foreground border border-divider hover:border-foreground/20 transition-all"
         >
           <Sparkles className="w-3.5 h-3.5" />
-          Pricing
+          {t("login.pricing")}
         </button>
       </div>
     </div>

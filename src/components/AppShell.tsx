@@ -5,7 +5,7 @@ import { Send, StopCircle, PanelLeft, Coins, X, Sparkles } from "lucide-react";
 import TextareaAutosize from "react-textarea-autosize";
 import { useRouter } from "next/navigation";
 import MessageBubble, { Message } from "./MessageBubble";
-import Sidebar, { AppMode, MODE_LABEL } from "./Sidebar";
+import Sidebar, { AppMode } from "./Sidebar";
 import ImageUploader from "./ImageUploader";
 import FileUploader, { ParsedFile } from "./FileUploader";
 import QuestionBank from "./QuestionBank";
@@ -26,6 +26,7 @@ import { analyzeQuestion } from "@/lib/questionAnalyzer";
 import { addKnowledgeEntry } from "@/lib/knowledgeBase";
 import { saveToBackend, loadFromBackend } from "@/lib/backend";
 import { chatCompletion, streamCompletion } from "@/lib/api";
+import { useI18n } from "@/lib/i18n";
 
 interface Conversation {
   id: string;
@@ -48,7 +49,14 @@ const TIER_NAMES: Record<string, string> = {
   "pro+": "Pro+",
 };
 
+const tModeLabel: Record<string, string> = {
+  solver: "Solver",
+  visualizer: "Visualizer",
+  chat: "Chat",
+};
+
 export default function AppShell({ user, onLogout }: { user: Record<string, unknown> | null; onLogout: () => void }) {
+  const { t } = useI18n();
   const router = useRouter();
   const userId = (user?.id as string) || (user?.username as string) || "anonymous";
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -236,7 +244,7 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
     if (!convId) {
       convId = Date.now().toString();
       convMode = mode;
-      const placeholderTitle = "新对话...";
+      const placeholderTitle = t("chat.newConversation");
       setConversations((prev) => [
         { id: convId!, title: placeholderTitle, messages: [], mode: convMode, createdAt: Date.now() },
         ...prev,
@@ -247,7 +255,7 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
     let processedContent = content;
 
     if (images.length > 0) {
-      setStatusText("识别图片中...");
+      setStatusText(t("chat.recognizing"));
       try {
         const description = await handleImageWithVisionModel(images, content);
         processedContent = description;
@@ -291,7 +299,7 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
     setFiles([]);
     setClearTrigger((t) => t + 1);
     setIsLoading(true);
-    setStatusText("思考中...");
+    setStatusText(t("chat.thinking"));
 
     setConversations((prev) =>
       prev.map((c) => c.id === convId ? { ...c, messages: [...c.messages, { role: "assistant" as const, content: "" }] } : c)
@@ -314,13 +322,13 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
         const responses: string[] = [];
 
         for (let i = 0; i < models.length; i++) {
-          setStatusText(`交叉验证中 (Model ${i + 1}/${models.length})...`);
+          setStatusText(t("chat.crossValidating", { n: i + 1, total: models.length }));
           if (abortRef.current?.signal.aborted) break;
           const text = await chatCompletion(apiMessages, { model: models[i], signal: abortRef.current?.signal }, userId);
           responses.push(text || "");
         }
 
-        setStatusText("合并交叉验证结果...");
+        setStatusText(t("chat.merging"));
         const responseList = responses.map((r, i) => `Response ${i + 1} (${models[i]}):\n${r}`).join("\n\n");
         const mergeStream = streamCompletion(
           [
@@ -342,7 +350,7 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
           );
         }
       } else if (resolvedIntensity === "hard" && isPaidTier) {
-        setStatusText("AI 回答中...");
+        setStatusText(t("chat.aiResponding"));
         const stream = streamCompletion(apiMessages, { model: effectiveModel, signal: abortRef.current?.signal }, userId);
         let accumulated = "";
         let reasoningAccumulated = "";
@@ -360,7 +368,7 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
         }
         finalContent = accumulated;
       } else {
-        setStatusText("AI 回答中...");
+        setStatusText(t("chat.aiResponding"));
         const stream = streamCompletion(apiMessages, { model: effectiveModel, signal: abortRef.current?.signal }, userId);
         let accumulated = "";
         let reasoningAccumulated = "";
@@ -511,7 +519,7 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
                     activeMode === m ? "bg-tab-active-bg text-tab-active-text" : "text-tab-inactive-text hover:text-foreground"
                   }`}
                 >
-                  {MODE_LABEL[m]}
+                  {m === "solver" ? t("mode.solver") : m === "visualizer" ? t("mode.visualizer") : t("mode.chat")}
                 </button>
               ))}
             </div>
@@ -523,14 +531,14 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
               className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md bg-input-bg border border-input-border text-muted hover:text-foreground transition-colors"
             >
               <Sparkles className="w-3 h-3" />
-              Plans
+              {t("chat.plans")}
             </button>
             {currentConv && messages.length > 0 && (
               <button
                 onClick={handleSaveLast}
                 className="text-[11px] px-2 py-1 rounded-md bg-input-bg border border-input-border text-muted hover:text-foreground transition-colors"
               >
-                Save All
+                {t("chat.saveAll")}
               </button>
             )}
           </div>
@@ -606,7 +614,6 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
                 {credits}
               </span>
               <span className="text-[10px]">{TIER_NAMES[creditTier] || "Free"}</span>
-              <span className="text-[9px] text-muted/50 ml-0.5">/mo</span>
             </button>
           </div>
           <div className="max-w-3xl mx-auto">
@@ -619,9 +626,9 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={
-                  activeMode === "solver" ? "输入题目，或上传图片/文件..."
-                  : activeMode === "visualizer" ? "描述你想要的图表..."
-                  : "输入问题... (Shift+Enter 换行)"
+                  activeMode === "solver" ? t("chat.solverPlaceholder")
+                  : activeMode === "visualizer" ? t("chat.visualizerPlaceholder")
+                  : t("chat.placeholder")
                 }
                 className="flex-1 bg-transparent resize-none outline-none text-foreground placeholder:text-muted min-h-[22px] max-h-[200px] text-[14px]"
                 maxRows={8}
@@ -658,11 +665,11 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
             <div className="flex items-center gap-3">
               <Coins className="w-5 h-5 text-amber-500" />
               <div>
-                <div className="text-sm font-medium">Monthly Quota</div>
-                <div className="text-xs text-muted">{credits} credits remaining this month · {TIER_NAMES[creditTier] || "Free"} plan</div>
+                <div className="text-sm font-medium">{t("credits.monthlyQuota")}</div>
+                <div className="text-xs text-muted">{t("credits.remaining", { n: credits })} · {t("credits.plan", { tier: TIER_NAMES[creditTier] || "Free" })}</div>
                 {credits === 0 && (
                   <button onClick={() => { setShowCreditPopup(false); setShowUpgrade(true); }} className="text-xs text-amber-500 hover:text-amber-400 mt-1 underline">
-                    Upgrade plan for more monthly credits
+                    {t("credits.upgradeForMore")}
                   </button>
                 )}
               </div>
