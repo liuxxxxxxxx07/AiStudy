@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { X, User, Coins, Sun, Moon, LogOut, Sparkles, ExternalLink, Check, Pencil, Loader2, Languages } from "lucide-react";
+import { X, User, Coins, Sun, Moon, LogOut, Sparkles, ExternalLink, Check, Pencil, Loader2, Languages, Download, Trash2, FileText, Eye } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useI18n, LOCALE_NAMES, type SupportedLocale } from "@/lib/i18n";
 import { updateProfile } from "@/lib/supabase-db";
@@ -66,11 +66,67 @@ export default function ProfileSettings({
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [showDataManager, setShowDataManager] = useState(false);
+  const [dataPreview, setDataPreview] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const stored = getStoredProfile(userId);
     setDisplayName(stored.displayName || userName);
   }, [userId, userName]);
+
+  const collectUserData = useCallback(() => {
+    const data: Record<string, unknown> = {};
+    const keys = Object.keys(localStorage);
+    const userKeys = keys.filter(k => k.includes(userId) || k.startsWith("ai-study-") || k === "dev_auth_session");
+    for (const key of userKeys) {
+      try {
+        data[key] = JSON.parse(localStorage.getItem(key) || "null");
+      } catch {
+        data[key] = localStorage.getItem(key);
+      }
+    }
+    return data;
+  }, [userId]);
+
+  const handleExportData = useCallback(() => {
+    const data = collectUserData();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `ai-study-data-${userId.slice(0, 8)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [collectUserData, userId]);
+
+  const handleViewData = useCallback(() => {
+    const data = collectUserData();
+    const summary: Record<string, string> = {};
+    for (const [key, val] of Object.entries(data)) {
+      if (Array.isArray(val)) {
+        summary[key] = `${val.length} items`;
+      } else if (val && typeof val === "object") {
+        summary[key] = `${Object.keys(val as object).length} fields`;
+      } else {
+        summary[key] = String(val);
+      }
+    }
+    setDataPreview(JSON.stringify(summary, null, 2));
+  }, [collectUserData]);
+
+  const handleDeleteAccount = useCallback(async () => {
+    if (!window.confirm("Are you sure you want to delete all your data? This action cannot be undone.")) return;
+    setDeleting(true);
+    const keys = Object.keys(localStorage);
+    const userKeys = keys.filter(k => k.includes(userId) || k.startsWith("ai-study-") || k === "dev_auth_session");
+    for (const key of userKeys) {
+      localStorage.removeItem(key);
+    }
+    setDeleting(false);
+    onLogout();
+    onClose();
+  }, [userId, onLogout, onClose]);
 
   const handleSaveName = useCallback(async () => {
     const trimmed = displayName.trim();
@@ -174,6 +230,7 @@ export default function ProfileSettings({
             </div>
           </div>
 
+          {/* ── Data Management ── */}
           <div>
             <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">{t("profile.account")}</h3>
             <div className="space-y-1">
@@ -189,8 +246,55 @@ export default function ProfileSettings({
             </div>
           </div>
 
-          <div className="text-center text-[10px] text-muted/40 pt-2 border-t border-divider">
-            {t("app.version")}
+          <div>
+            <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Your Data</h3>
+            <div className="space-y-1">
+              <button onClick={handleViewData} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-foreground/80 hover:bg-hover-bg transition-colors">
+                <Eye className="w-4 h-4" />
+                View my data
+              </button>
+              <button onClick={handleExportData} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-foreground/80 hover:bg-hover-bg transition-colors">
+                <Download className="w-4 h-4" />
+                Export my data
+              </button>
+              <button onClick={handleDeleteAccount} disabled={deleting} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-red-500 hover:bg-red-500/10 transition-colors">
+                <Trash2 className="w-4 h-4" />
+                {deleting ? "Deleting..." : "Delete my account"}
+              </button>
+            </div>
+          </div>
+
+          {dataPreview && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setDataPreview(null)}>
+              <div className="bg-card border border-input-border rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-sm font-semibold flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    Your Stored Data
+                  </h2>
+                  <button onClick={() => setDataPreview(null)} className="p-1 rounded-lg hover:bg-hover-bg text-muted transition-colors">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <pre className="text-xs text-muted leading-relaxed whitespace-pre-wrap font-mono bg-foreground/[0.03] rounded-lg p-4 border border-divider">
+                  {dataPreview}
+                </pre>
+                <p className="text-xs text-muted/50 mt-4">
+                  This is a summary of the data stored for your account. Use "Export my data" to download the full JSON.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="text-center text-[10px] text-muted/40 pt-2 border-t border-divider space-y-1">
+            <div className="flex items-center justify-center gap-2">
+              <a href="/terms" className="hover:text-foreground transition-colors">Terms</a>
+              <span>·</span>
+              <a href="/privacy" className="hover:text-foreground transition-colors">Privacy</a>
+              <span>·</span>
+              <a href="/refund" className="hover:text-foreground transition-colors">Refund</a>
+            </div>
+            <div>{t("app.version")}</div>
           </div>
         </div>
       </div>

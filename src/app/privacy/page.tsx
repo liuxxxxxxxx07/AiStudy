@@ -62,7 +62,7 @@ export default function PrivacyPage() {
         <li>Request a copy of all data we hold about you</li>
       </ul>
       <p>
-        To exercise these rights, contact us at <a href="mailto:support@stem-aistudy.com" className="text-foreground underline underline-offset-2">support@stem-aistudy.com</a>.
+        To exercise these rights, go to your profile settings (click your avatar in the sidebar) and use the "Your Data" section, or contact us at <a href="mailto:support@stem-aistudy.com" className="text-foreground underline underline-offset-2">support@stem-aistudy.com</a>.
       </p>
 
       <h2 className="text-lg font-semibold mt-8 mb-2">9. Data Security</h2>

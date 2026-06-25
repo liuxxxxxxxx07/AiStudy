@@ -51,9 +51,20 @@ npm run deploy
 1. 推送代码到 GitHub 仓库
 2. Cloudflare Dashboard → Pages → Create a project → Connect to Git
 3. 选择仓库，配置:
-   - Build command: `npm run build`
-   - Build output directory: `out`
+    - Build command: `npm run build`
+    - Build output directory: `out`
 4. 每次 `git push` 自动构建部署
+
+## 环境变量配置
+
+部署后，必须在 Cloudflare Dashboard 设置以下环境变量，否则 API 功能无法工作：
+
+1. Cloudflare Dashboard → Pages → `ai-study` → **Settings** → **Environment variables** (生产环境)
+2. 添加:
+    | 变量名 | 值 |
+    |--------|-----|
+    | `OPENROUTER_API_KEY` | 你的 OpenRouter API Key |
+3. 保存后重新部署（Deployments → 点击最新部署 → Retry）
 
 ## 更新部署
 
