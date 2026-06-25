@@ -13,6 +13,7 @@ export default function PricingPage() {
   const [userEmail, setUserEmail] = useState<string | undefined>();
   const [currentTier, setCurrentTier] = useState("free");
   const [provider, setProvider] = useState<"stripe" | "paypal" | "lemonsqueezy" | "paddle" | "payoneer">("paddle");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const sb = getSupabase();
@@ -39,6 +40,7 @@ export default function PricingPage() {
   }, []);
 
   const handleSelect = useCallback(async (tierId: string) => {
+    setError(null);
     if (!userId) {
       router.push("/");
       return;
@@ -56,17 +58,27 @@ export default function PricingPage() {
         window.location.href = checkout.url;
       }
     } catch (err) {
+      const msg = err instanceof Error ? err.message : "Checkout failed";
+      setError(msg);
       console.error("Checkout failed:", err);
     }
   }, [userId, userEmail, provider, router]);
 
   return (
-    <PaymentPlans
-      onBack={() => router.push("/")}
-      onSelect={handleSelect}
-      userId={userId}
-      userEmail={userEmail}
-      currentTier={currentTier}
-    />
+    <>
+      {error && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-red-500/10 border border-red-500/20 text-red-600 text-sm px-5 py-3 rounded-xl shadow-lg max-w-lg text-center">
+          {error}
+          <button onClick={() => setError(null)} className="ml-3 text-red-400 hover:text-red-600">✕</button>
+        </div>
+      )}
+      <PaymentPlans
+        onBack={() => router.push("/")}
+        onSelect={handleSelect}
+        userId={userId}
+        userEmail={userEmail}
+        currentTier={currentTier}
+      />
+    </>
   );
 }

@@ -485,6 +485,7 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
           userId={userId}
           onSelect={selectConversation}
           onDelete={deleteConversation}
+          onNewChat={() => createConversation(mode)}
           onCollapse={() => setSidebarOpen(false)}
           onOpenBank={() => setBankOpen(true)}
           onOpenKnowledgeBase={() => setKbOpen(true)}
@@ -533,14 +534,6 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
               <Sparkles className="w-3 h-3" />
               {t("chat.plans")}
             </button>
-            {currentConv && messages.length > 0 && (
-              <button
-                onClick={handleSaveLast}
-                className="text-[11px] px-2 py-1 rounded-md bg-input-bg border border-input-border text-muted hover:text-foreground transition-colors"
-              >
-                {t("chat.saveAll")}
-              </button>
-            )}
           </div>
         </header>
 
