@@ -1,7 +1,8 @@
 "use client";
 
-import { Moon, Sun, Trash2, PanelLeftClose, Bookmark, BookOpen, GraduationCap, Search, Sparkles, LogOut, Coins, GitBranch } from "lucide-react";
+import { Moon, Sun, Trash2, PanelLeftClose, Bookmark, BookOpen, GraduationCap, Search, Sparkles, LogOut, Coins, GitBranch, User } from "lucide-react";
 import { useTheme } from "next-themes";
+import { getInitials, getAvatarColor } from "./ProfileSettings";
 
 export type AppMode = "solver" | "visualizer" | "chat";
 
@@ -17,6 +18,8 @@ interface SidebarProps {
   currentId: string | null;
   credits: number;
   tier: string;
+  userName: string;
+  userId: string;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
   onCollapse: () => void;
@@ -28,6 +31,7 @@ interface SidebarProps {
   onOpenWiki: () => void;
   onLogout: () => void;
   onUpgrade: () => void;
+  onOpenProfile: () => void;
 }
 
 const MODE_TAG_STYLE: Record<string, string> = {
@@ -47,6 +51,8 @@ export default function Sidebar({
   currentId,
   credits,
   tier,
+  userName,
+  userId,
   onSelect,
   onDelete,
   onCollapse,
@@ -58,22 +64,24 @@ export default function Sidebar({
   onOpenWiki,
   onLogout,
   onUpgrade,
+  onOpenProfile,
 }: SidebarProps) {
   const { theme, setTheme } = useTheme();
 
   return (
     <aside className="w-60 flex-shrink-0 h-full bg-sidebar-bg border-r border-sidebar-border flex flex-col">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-sidebar-border">
-        <span className="font-serif-body text-sm font-semibold tracking-wide">
-          AI Study
-        </span>
-        <button
-          onClick={onCollapse}
-          className="p-1 rounded hover:bg-hover-bg transition-colors text-muted"
-        >
+      <button onClick={onOpenProfile} className="flex items-center gap-3 px-4 py-3 border-b border-sidebar-border hover:bg-hover-bg transition-colors w-full text-left">
+        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${getAvatarColor(userName)}`}>
+          {getInitials(userName)}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-medium truncate">{userName}</div>
+          <div className="text-[10px] text-muted truncate">{tier === "free" ? "Free Plan" : `${tier} Plan`}</div>
+        </div>
+        <button onClick={(e) => { e.stopPropagation(); onCollapse(); }} className="p-1 rounded hover:bg-hover-bg transition-colors text-muted">
           <PanelLeftClose className="w-3.5 h-3.5" />
         </button>
-      </div>
+      </button>
 
       <div className="px-3 py-3">
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-input-bg border border-input-border">

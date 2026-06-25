@@ -16,6 +16,7 @@ import FlashCard from "./FlashCard";
 import PersonalWiki from "./PersonalWiki";
 import IntensitySelector from "./IntensitySelector";
 import UpgradeModal from "./UpgradeModal";
+import ProfileSettings from "./ProfileSettings";
 import { SYSTEM_PROMPTS } from "@/lib/prompts";
 import { INTENSITY_MODELS, VISION_MODEL, MODE_COST, MODEL_CREDIT_COST, MEDIUM_MODELS, HARD_MODELS, EXTREME_MERGE_MODEL, CROSS_VALIDATION_MODELS, TIER_ACCESS } from "@/lib/puter";
 import { addQuestion, getQuestionBank, Question } from "@/lib/examEngine";
@@ -72,6 +73,7 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
   const [credits, setCredits] = useState(0);
   const [creditTier, setCreditTier] = useState("free");
   const [dbLoaded, setDbLoaded] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -82,6 +84,7 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
   const messages = currentConv?.messages || [];
   const activeMode = currentConv?.mode || mode;
   const isPaidTier = creditTier !== "free";
+  const userName = (user?.username as string) || "User";
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -470,6 +473,8 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
           currentId={currentId}
           credits={credits}
           tier={creditTier}
+          userName={userName}
+          userId={userId}
           onSelect={selectConversation}
           onDelete={deleteConversation}
           onCollapse={() => setSidebarOpen(false)}
@@ -481,6 +486,7 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
           onOpenWiki={() => setWikiOpen(true)}
           onLogout={onLogout}
           onUpgrade={handleUpgrade}
+          onOpenProfile={() => setShowProfile(true)}
         />
       )}
 
@@ -669,6 +675,18 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
       )}
 
       {showUpgrade && <UpgradeModal onBack={() => setShowUpgrade(false)} onSelect={handleUpgradeSelect} userId={userId} userEmail={user?.email as string | undefined} currentTier={creditTier} />}
+      {showProfile && (
+        <ProfileSettings
+          userId={userId}
+          userName={userName}
+          userEmail={user?.email as string | undefined}
+          credits={credits}
+          tier={creditTier}
+          onClose={() => setShowProfile(false)}
+          onLogout={onLogout}
+          onUpgrade={handleUpgrade}
+        />
+      )}
     </div>
   );
 }
