@@ -32,7 +32,7 @@ export default function PrivacyPage() {
 
       <h2 className="text-lg font-semibold mt-8 mb-2">5. Payment Processing</h2>
       <p>
-        Payment transactions are processed by third-party providers (Stripe, PayPal, LemonSqueezy). We do not store full credit card numbers. These providers have their own privacy policies governing payment data.
+        Payment transactions are processed securely by <strong>Paddle</strong>. We do not store full credit card numbers. Paddle has its own privacy policy governing payment data. By subscribing, you agree to Paddle&apos;s terms for payment processing.
       </p>
 
       <h2 className="text-lg font-semibold mt-8 mb-2">6. Cookies</h2>
@@ -62,7 +62,7 @@ export default function PrivacyPage() {
         <li>Request a copy of all data we hold about you</li>
       </ul>
       <p>
-        To exercise these rights, contact us through the app or the email on our pricing page.
+        To exercise these rights, contact us at <a href="mailto:support@stem-aistudy.com" className="text-foreground underline underline-offset-2">support@stem-aistudy.com</a>.
       </p>
 
       <h2 className="text-lg font-semibold mt-8 mb-2">9. Data Security</h2>
@@ -77,7 +77,7 @@ export default function PrivacyPage() {
 
       <h2 className="text-lg font-semibold mt-8 mb-2">11. Contact</h2>
       <p>
-        For privacy-related inquiries, contact our support team through the app.
+        For privacy-related inquiries, contact us at <a href="mailto:support@stem-aistudy.com" className="text-foreground underline underline-offset-2">support@stem-aistudy.com</a>.
       </p>
     </LegalPage>
   );

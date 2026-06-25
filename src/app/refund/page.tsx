@@ -26,7 +26,7 @@ export default function RefundPage() {
 
       <h2 className="text-lg font-semibold mt-8 mb-2">4. How to Request a Refund</h2>
       <p>
-        To request a refund, contact our support team through the app or email the address listed in the app settings. Include your account email and reason for the request. Refunds are processed within 5–10 business days.
+        To request a refund, contact us at <a href="mailto:support@stem-aistudy.com" className="text-foreground underline underline-offset-2">support@stem-aistudy.com</a>. Include your account email and reason for the request. Refunds are processed within 5–10 business days.
       </p>
 
       <h2 className="text-lg font-semibold mt-8 mb-2">5. Credit Refunds</h2>
@@ -46,7 +46,7 @@ export default function RefundPage() {
 
       <h2 className="text-lg font-semibold mt-8 mb-2">8. Contact</h2>
       <p>
-        For refund requests or billing questions, contact our support team through the app.
+        For refund requests or billing questions, contact us at <a href="mailto:support@stem-aistudy.com" className="text-foreground underline underline-offset-2">support@stem-aistudy.com</a>.
       </p>
     </LegalPage>
   );

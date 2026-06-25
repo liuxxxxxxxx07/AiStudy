@@ -34,7 +34,7 @@ export default function PaymentCancelPage() {
         </div>
 
         <p className="text-xs text-muted/50">
-          Need help? <a href="mailto:support@aistudy.com" className="text-foreground underline underline-offset-2">Contact support</a>
+          Need help? <a href="mailto:support@stem-aistudy.com" className="text-foreground underline underline-offset-2">Contact support</a>
         </p>
       </div>
     </div>

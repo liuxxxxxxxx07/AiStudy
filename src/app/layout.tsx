@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Providers from "@/components/Providers";
+import CookieConsent from "@/components/CookieConsent";
 import "katex/dist/katex.min.css";
 import "./globals.css";
 
@@ -55,7 +56,10 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="h-full">
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <CookieConsent />
+        </Providers>
       </body>
     </html>
   );

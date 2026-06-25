@@ -2,295 +2,357 @@
 
 ## 架构概览
 
-纯静态 Next.js 应用（`output: 'export'`），使用 OpenRouter API 完成 AI 聊天功能，localStorage 存储用户数据。
-
-```mermaid
-flowchart TD
-  Browser[Browser]
-  Browser --> API["OpenRouter API - AI 聊天"]
-  Browser --> LocalST["localStorage 存储"]
-  LocalST --> QBank["题库 (examEngine)"]
-  LocalST --> KB["知识库 (knowledgeBase)"]
-  LocalST --> Wiki["个人 Wiki (wikiEngine)"]
-  API --> Models["GPT-4o / Claude / Tencent"]
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Cloudflare Pages (static hosting)                              │
+│  https://stem-aistudy.com                                       │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │  Next.js 16 (output: 'export')                            │  │
+│  │  - LoginScreen (Supabase Auth: Google/GitHub/Email)       │  │
+│  │  - AppShell (主应用: 聊天/模式/强度/工具)                  │  │
+│  │  - Onboarding (首次访问引导, 首次登录使用指南)              │  │
+│  │  - ProfileSettings (昵称编辑/主题/语言/积分/退出)          │  │
+│  │  - PricingPage (定价/Paddle 支付)                          │  │
+│  │  - Legal Pages (Terms/Privacy/Refund)                      │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│           │                    │                   │             │
+│           ▼                    ▼                   ▼             │
+│  ┌──────────────┐  ┌──────────────────┐  ┌──────────────────┐  │
+│  │ OpenRouter   │  │ Supabase Auth    │  │ Railway          │  │
+│  │ AI chat API  │  │ Google/GitHub    │  │ Payment Server   │  │
+│  │ (stream)     │  │ Email/Password   │  │ Paddle checkout  │  │
+│  └──────────────┘  └──────────────────┘  │ webhooks         │  │
+│                                           └──────────────────┘  │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │  localStorage (所有用户数据)                                │  │
+│  │  对话 / 积分 / 题库 / 知识库 / Wiki / 考试记录 / 偏好       │  │
+│  └───────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ## 技术栈
 
 | 技术 | 版本 | 用途 |
 |------|------|------|
-| **Next.js** | 16.2.9 | 静态导出 React 框架 |
+| **Next.js** | 16.2.9 | 静态导出 React 框架 (`output: 'export'`) |
 | **React** | 19.2.4 | UI 渲染 |
 | **TypeScript** | 5.x | 类型安全 |
 | **Tailwind CSS** | 4.x | 样式 |
-| **Puter.js** | v2 | 认证 / AI 聊天 / KV 存储 |
-| **JSZip** | 3.10.1 | PPTX 文件解析 |
+| **Supabase** | ^2.108.2 | Auth (Google OAuth, GitHub OAuth, Email/Password) |
+| **OpenRouter API** | — | AI 聊天 (多模型接入) |
 | **lucide-react** | — | 图标 |
-| **react-markdown** | — | Markdown 渲染 |
-| **remark-gfm/math** + **rehype-katex** | — | LaTeX 公式渲染 |
-| **mermaid** | — | 图表渲染 |
+| **react-markdown + rehype-katex + remark-math** | — | Markdown + LaTeX 渲染 |
+| **mermaid** | ^11.15.0 | 图表渲染 |
 
-## 数据流
-
-### 认证流程
-```
-页面加载 → 检查 localStorage 用户信息 → 已登录: 加载本地数据 → 未登录: LoginScreen
-登录后: 从 localStorage 拉取对话记录 + 额度数据 → 显示登录积分弹窗 (5秒自动消失)
-```
-
-### AI 聊天流程
-```
-用户输入消息 → 自动创建对话
-→ 如有图片: 先用 tencent/hy3-preview 识别图片内容 (Vision Model)
-→ 检查额度 → 不足则弹出 Upgrade 升级界面
-→ 模型选择: Auto(默认) → 根据付费等级自动选择 / 付费用户可选 Balanced/Deep/Extreme
-→ Extreme 模式: 多模型交叉验证 (GPT-4o + Claude 各自回答 → 合并结果)
-→ OpenRouter API stream → 流式更新 UI
-→ 后台: tencent/hy3-preview 生成对话标题 (最大6词, 根据输入语言)
-→ 数据自动保存到 localStorage (2秒防抖)
-```
-
-### 数据同步流程
-```
-登录成功 → loadFromBackend(userId) → localStorage 拉取对话+额度
-对话变更 → debounced persist (2秒) → saveToBackend(userId) → localStorage 写入
-```
-
-## 核心模块
-
-### 1. 登录 + 额度系统
-
-| 模块 | 文件 |
+**支付后端** (Express on Railway):
+| 技术 | 用途 |
 |------|------|
-| 登录 UI | `components/LoginScreen.tsx` |
-| OpenAI (OpenRouter) | `lib/api.ts` |
-| 额度管理 | `lib/credits.ts` |
-| 云端同步 | `lib/backend.ts` |
+| **Express** | 支付 API 服务 |
+| **@paddle/paddle-node-sdk** | Paddle 支付 |
+| **Stripe/PayPal/LemonSqueezy SDK** | 备用支付渠道 (未启用) |
 
-**额度规则**：
-- 新用户 50 积分，每 3 小时自动补充
-- 消耗: Solver 20, Visualizer 15, Chat 10
-- 额度不足时自动弹出 Upgrade 升级界面
-- 登录后弹窗显示当前积分和套餐等级 (5秒自动消失)
-- 侧边栏和输入栏均有积分显示 + Upgrade 按钮
-- **付费模型 (Balanced/Deep/Extreme)** 需要付费套餐才能使用，点击时弹出 Upgrade
+## i18n 多语言系统
 
-### 2. 三模式 + 强度选择
-
-| 模式 | ID | 用途 | 消耗 |
-|------|----|------|------|
-| Solver | `solver` | 解题 | 20分 |
-| Visualizer | `visualizer` | 生成 Mermaid 图表 | 15分 |
-| Chat | `chat` | 自由问答 | 10分 |
-
-模式切换只保留在 Header 中央切换按钮，左侧侧边栏不再有模式按钮。
-
-### 3. 强度选择器 (原"难度选择器")
-
-| 强度 | 模型 | 付费 | 说明 |
-|------|------|------|------|
-| Auto 🔄 | `tencent/hy3-preview` | 免费 | 默认，根据套餐自动选择 |
-| Light 🌱 | `openai/gpt-4o-mini` | 免费 | 轻量快速 |
-| Balanced ⚖️ | `anthropic/claude-sonnet-4-20250514` | 付费 | 平衡模式 |
-| Deep 🔬 | `openai/gpt-4o` | 付费 | 深入分析 |
-| Extreme ⚡ | 多模型交叉验证 | 付费 | GPT-4o + Claude 分别回答 → 合并结果 |
-
-**UI**: 可拖动的滑块组件，位于聊天输入框上方。点击展开详细选择面板，付费选项显示 `PAID` 标签。
-
-组件: `components/IntensitySelector.tsx`
-
-### 4. 付费方案
-
-| 方案 | 价格 | 额度/3h | 功能 |
-|------|------|---------|------|
-| Plus | $9.99/月 | 200 | Balanced 模型访问 |
-| Pro | $19.99/月 | 500 | 全模型 (Deep + Extreme) + 多模型交叉验证 |
-| Pro+ | $39.99/月 | 无限 | 全功能 + SLA |
-
-**升级界面**: `components/UpgradeModal.tsx` — 精美弹窗，3 个套餐卡片，功能对比列表，Popular 标签，玻璃模糊背景。
-
-升级入口:
-- 侧边栏 Upgrade 按钮
-- 输入栏积分点击
-- 额度耗尽时自动弹出
-- 点击付费强度时弹出
-
-### 5. 图片识别
-
-使用 `tencent/hy3-preview` (VISION_MODEL) 进行图片分析。发送消息前，如有图片附件，先用该模型提取图片中的文本/公式/图表内容，然后作为上下文发送给主 AI 模型。
-
-### 6. 题库 + Flashcard 闪卡
-
-| 功能 | 文件 |
+| 文件 | 说明 |
 |------|------|
-| 题库 CRUD + 搜索 | `components/QuestionBank.tsx` |
-| 题库引擎 | `lib/examEngine.ts` |
-| 闪卡 | `components/FlashCard.tsx` |
+| `src/lib/i18n.tsx` | 核心: `I18nProvider`, `useI18n()`, `setLocale()` |
+| `src/lib/locales/en.ts` | 英文翻译 (~200 keys) |
+| `src/lib/locales/zh.ts` | 中文翻译 (完整对应) |
+| `src/components/Providers.tsx` | 包裹 `<I18nProvider>` |
 
-- 保存 AI 问答对到题库
-- AI 自动预测课程/学科/TAG (`lib/questionAnalyzer.ts`)
-- 闪卡翻转复习 (键盘快捷键: ← → Space)
-- 搜索过滤: 学科/TAG/时间/难度
+**流程**: 启动 → `navigator.language` 检测 (zh→中文, 其他→英文) → `localStorage` 持久化 → 用户可在 ProfileSettings 切换
+**切换方式**: ProfileSettings 模态框 → 语言按钮 (点按 EN ↔ 中文)
 
-### 7. 知识库
+## 认证流程
 
-| 功能 | 文件 |
+```
+页面加载 → supabase.auth.getSession()
+  → 有 session → 检测 Onboarding (pre-login & post-login) → AppShell
+  → 无 session → 检测 Onboarding pre-login → LoginScreen
+```
+
+**支持的登录方式**:
+- Google OAuth (Supabase)
+- GitHub OAuth (Supabase)
+- Email/Password (Supabase，需配置 SMTP)
+
+**开发者模式**: 若 `.env.local` 中 Supabase 变量缺失, 使用 mock Supabase client (localStorage 模拟 session)
+
+## Onboarding 引导系统
+
+| 阶段 | 触发条件 | 内容 |
+|------|----------|------|
+| **pre-login** | 首次访问网站, 登录前 | 5 页产品介绍 (模式/知识管理/工具/额度), 标记"开发中" |
+| **post-login** | 首次登录后 | 4 页使用指南 (快速上手/AI强度/额度/上传文件) |
+
+- 使用 `localStorage` 标记 (`ai-study-onboarding-pre-done`, `ai-study-onboarding-post-done`)
+- 每页可单独跳过, 最后一页"开始使用/注册体验"
+- 组件: `src/components/Onboarding.tsx`
+
+## Profile & Settings (个人资料与设置)
+
+| 功能 | 说明 |
 |------|------|
-| 知识库页面 + 文件上传 | `components/KnowledgeBasePage.tsx` |
-| 知识库引擎 | `lib/knowledgeBase.ts` |
-| 文件解析器 | `lib/fileParser.ts` |
+| **入口** | 侧栏顶部 (头像首字母 + 用户名) |
+| **显示名称** | 可编辑, 保存到 localStorage + Supabase |
+| **积分/套餐** | 实时显示余额, 点击升级跳转定价页 |
+| **主题切换** | 浅色/深色 (同步 sidebar 按钮) |
+| **语言切换** | 点按循环 EN ↔ 中文 |
+| **退出登录** | 确认后退出 |
 
-- 支持文件类型: HTML, PPTX, PPT, DOC, DOCX, PDF, TXT, MD
-- HTML 文件上传后自动解析提取定理/定义/公式
-- 支持 PPTX 文件 (JSZip 提取文本)
-- 提取结果自动导入 Wiki
+组件: `src/components/ProfileSettings.tsx`
 
-### 8. 个人 Wiki + 节点图
+## 积分系统
 
-| 功能 | 文件 |
+### 每月额度
+
+| 套餐 | 额度/月 |
+|------|---------|
+| Free | 50 |
+| Plus | 200 |
+| Pro | 2000 |
+| Pro+ | 10000 |
+
+### 每次请求消耗
+
+**总消耗 = MODEL_CREDIT_COST[intensity] + MODE_COST[mode]**
+
+| 强度 | 模型 | 消耗 |
+|------|------|------|
+| Auto | 自动选择 | 1 |
+| Light | deepseek/deepseek-v4-pro | 2 |
+| Balanced | qwen/qwen3.7-max | 5 |
+| Deep | openai/gpt-5.5 | 30 |
+| Extreme | 7模型交叉验证 | 700 |
+
+| 模式 | 消耗 |
 |------|------|
-| Wiki CRUD + 图形/列表/编辑 | `components/PersonalWiki.tsx` |
-| 节点图可视化 | `components/WikiNodeGraph.tsx` |
-| Wiki 引擎 | `lib/wikiEngine.ts` |
+| Chat | +0 |
+| Solver | +1 |
+| Visualizer | +1 |
 
-- 5 种分类: theorem(蓝), definition(绿), formula(紫), note(黄), concept(灰)
-- Obsidian 风格节点图: SVG 力导向布局, 拖拽, 分类颜色编码
-- 自动关联: 基于共享标签自动链接条目
-- 搜索 + 分类过滤
+**免费额度示例**: Chat+Light = 2 额度 → 25 次对话; Solver+Light = 3 额度 → ~16 次
 
-### 9. 模拟考
+### 数据存储
+- `localStorage` key: `ai-study-credits-{userId}`
+- 可选同步到 Supabase `credits` 表
 
-| 功能 | 文件 |
-|------|------|
-| 模拟考 | `components/MockExam.tsx` |
-| 考试引擎 | `lib/examEngine.ts` |
+## 模式系统
 
-- 配置: 强度/题量/时长/学科
-- 计时考试界面
-- 自动评分 + 错题回顾 + 闪卡复习
+| 模式 | ID | 用途 |
+|------|----|------|
+| Solver | `solver` | 分步解题 (STEM 题目) |
+| Visualizer | `visualizer` | 生成 Mermaid 图表 |
+| Chat | `chat` | 自由问答 |
 
-### 10. 举一反三 + 检索系统
+模式切换在 Header 中央 (胶囊按钮)。
 
-| 功能 | 文件 |
-|------|------|
-| 类似题目生成 | `components/SimilarQuestions.tsx` |
-| AI 分析 | `lib/questionAnalyzer.ts` |
-| 搜索面板 | `components/SearchPanel.tsx` |
+## 强度选择器
 
-- AI 自动生成 3 道类似题目
-- 全文搜索 + 多维度过滤: 学科/TAG/难度/时间范围
+滑块组件, 位于聊天输入框上方:
+| 强度 | key | 付费 |
+|------|-----|------|
+| Auto 🔄 | auto | 免费 |
+| Light 🌱 | easy | 免费 |
+| Balanced ⚖️ | medium | 付费 |
+| Deep 🔬 | hard | 付费 |
+| Extreme ⚡ | extreme | 付费 |
 
-### 11. 消息气泡 (MessageBubble)
+组件: `src/components/IntensitySelector.tsx`
 
-`components/MessageBubble.tsx`
-- Markdown + LaTeX + Mermaid 渲染
-- Thinking 折叠区域 (reasoning 字段)
-- 强度/模型标签显示
-- 保存到题库按钮
-- 举一反三按钮
+## 支付系统
 
-### 12. 站点仪表盘
+### 架构
+```
+Frontend (Cloudflare) ──POST checkout──→ Railway (payment-server)
+                                                 │
+                                          Paddle API
+                                                 │
+                                    Paddle Webhook → Railway
+```
 
-`components/AdminStats.tsx`
-- 查看用户数、存储键数
-- 图形化卡片界面
-- 刷新按钮
+### 定价页
+- 组件: `src/components/PaymentPlans.tsx` (独立定价页), `src/components/UpgradeModal.tsx` (弹窗)
+- 入口: 侧栏 Upgrade、账户余额点击、额度耗尽自动弹出、点击付费强度时弹出
+- 支付处理: Railway Express server → Paddle
+- `src/lib/payment-client.ts` → 调用 Railway API `/api/paddle/create-checkout`
 
-## 项目文件结构
+### Railway 支付服务器
+- `payment-server/src/index.ts` — Express 入口
+- `payment-server/src/paddle.ts` — Paddle checkout + webhook
+- `payment-server/.env` — Paddle API keys, prices, ALLOWED_ORIGINS, FRONTEND_URL
+- `railway.json` — Railway 部署配置
+
+### Paddle 配置要求
+- Checkout Settings: 提交 `stem-aistudy.com` 域名审批
+- Webhooks: `https://aistudy-production-d3da.up.railway.app/api/paddle/webhook`
+- 法律页面: Terms (含公司名) / Privacy / Refund 必须通过导航可访问
+
+## 图片识别流程
+
+```
+用户发送含图片的消息
+  → tencent/hy3-preview (VISION_MODEL) 识别图片内容
+  → 识别结果作为上下文发送给主 AI 模型
+  → 主模型根据识别内容 + 用户问题生成回答
+```
+
+## 部署
+
+### Cloudflare Pages (前端)
+- `output: 'export'` → `npm run build` → `out/` 目录
+- 自定义域名: `stem-aistudy.com`
+- 自动部署: GitHub 仓库连接
+
+### Railway (支付后端)
+- `payment-server/` 目录
+- 部署配置: `railway.json`
+- 自动部署: GitHub 仓库连接 (push 到 main)
+
+### 环境变量
+
+**前端 `.env.local`**:
+```
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+NEXT_PUBLIC_PAYMENT_SERVER_URL=https://aistudy-production-d3da.up.railway.app
+OPENROUTER_API_KEY=...
+```
+
+**支付服务器 `payment-server/.env`**:
+```
+PADDLE_API_KEY=...
+PADDLE_ENV=production
+PADDLE_WEBHOOK_SECRET=...
+PADDLE_PRICE_PLUS=...
+PADDLE_PRICE_PRO=...
+PADDLE_PRICE_PRO_PLUS=...
+PORT=3001
+ALLOWED_ORIGINS=https://stem-aistudy.com
+SERVER_URL=https://aistudy-production-d3da.up.railway.app
+FRONTEND_URL=https://stem-aistudy.com
+```
+
+## 数据库 (Supabase)
+
+`supabase/migrations/001_schema.sql`:
+- `profiles` — id, email, full_name, avatar_url, tier
+- `credits` — user_id, balance, tier
+- `subscriptions` — 多支付渠道订阅
+- `conversations` + `messages` — 对话数据
+- `questions` — 题库
+- `exam_results` — 考试记录
+- `knowledge_entries` — 知识库
+- `wiki_entries` + `wiki_links` — 个人 Wiki
+
+## 文件结构
 
 ```
 E:\ai-study-puter
-├── next.config.ts               # output: 'export' 静态导出
-├── deploy-fixed.js              # Puter.js SDK 批量部署脚本
-├── deploy.js                    # (旧) CLI 部署脚本
-├── deploy-api.js                # (备用) REST API 直连部署
 ├── src/
 │   ├── app/
-│   │   ├── layout.tsx           # 根布局 + Puter.js script
-│   │   ├── page.tsx             # 登录门控 → AppShell
-│   │   └── globals.css          # 全局样式 + CSS 变量
+│   │   ├── layout.tsx              # 根布局 + SEO meta
+│   │   ├── page.tsx                # Auth gate + Onboarding
+│   │   ├── globals.css             # 全局样式 (light/dark)
+│   │   ├── auth/callback/          # OAuth 回调处理
+│   │   ├── api/chat/route.ts       # OpenRouter API 代理 (仅 dev)
+│   │   ├── pricing/page.tsx        # 定价页
+│   │   ├── payment/success/        # 支付成功页
+│   │   ├── payment/cancel/         # 支付取消页
+│   │   ├── terms/page.tsx
+│   │   ├── privacy/page.tsx
+│   │   └── refund/page.tsx
 │   ├── components/
-│   │   ├── AppShell.tsx         # 主应用 (Puter AI + 额度 + 云端同步 + 所有功能集成)
-│   │   ├── Sidebar.tsx          # 侧边栏 (对话列表 + Upgrade + 所有工具入口)
-│   │   ├── MessageBubble.tsx    # 消息气泡 (Markdown+LaTeX+Mermaid+Thinking)
-│   │   ├── LoginScreen.tsx      # 登录界面
-│   │   ├── UpgradeModal.tsx     # 升级弹窗 (Plus/Pro/Pro+ 精美卡片)
-│   │   ├── IntensitySelector.tsx # 强度选择器 (可拖动滑块, auto/extreme)
-│   │   ├── AdminStats.tsx       # 站点仪表盘 (用户数/存储键)
-│   │   ├── QuestionBank.tsx     # 题库
-│   │   ├── FlashCard.tsx        # 闪卡反转复习
-│   │   ├── SimilarQuestions.tsx # 举一反三
-│   │   ├── KnowledgeBasePage.tsx# 知识库
-│   │   ├── PersonalWiki.tsx     # 个人 Wiki
-│   │   ├── WikiNodeGraph.tsx    # Obsidian 风格节点图
-│   │   ├── MockExam.tsx         # 模拟考
-│   │   ├── SearchPanel.tsx      # 检索系统
-│   │   ├── FileUploader.tsx     # 文件上传
-│   │   ├── ImageUploader.tsx    # 图片上传/粘贴
-│   │   ├── MermaidRenderer.tsx  # Mermaid 图表渲染
-│   │   └── Providers.tsx        # ThemeProvider
+│   │   ├── AppShell.tsx           # 主应用壳
+│   │   ├── Sidebar.tsx            # 侧栏 (对话/工具/用户)
+│   │   ├── LoginScreen.tsx        # 登录页
+│   │   ├── Onboarding.tsx         # 引导幻灯片 (pre/post login)
+│   │   ├── ProfileSettings.tsx    # 个人资料 & 设置
+│   │   ├── MessageBubble.tsx      # 消息气泡 (Markdown/LaTeX/Mermaid)
+│   │   ├── UpgradeModal.tsx       # 升级弹窗
+│   │   ├── PaymentPlans.tsx       # 定价页组件
+│   │   ├── IntensitySelector.tsx  # 强度选择器滑块
+│   │   ├── Providers.tsx          # ThemeProvider + I18nProvider
+│   │   ├── QuestionBank.tsx       # 题库
+│   │   ├── FlashCard.tsx          # 闪卡
+│   │   ├── KnowledgeBasePage.tsx  # 知识库
+│   │   ├── PersonalWiki.tsx       # 个人 Wiki
+│   │   ├── WikiNodeGraph.tsx      # 节点图可视化
+│   │   ├── MockExam.tsx           # 模拟考试
+│   │   ├── SearchPanel.tsx        # 全文搜索
+│   │   ├── SimilarQuestions.tsx   # 举一反三
+│   │   ├── FileUploader.tsx       # 文件上传
+│   │   ├── ImageUploader.tsx      # 图片上传
+│   │   ├── MermaidRenderer.tsx    # Mermaid 渲染
+│   │   ├── AdminStats.tsx         # 站点统计
+│   │   └── LegalPage.tsx          # 法律页面包装
 │   └── lib/
+│       ├── i18n.tsx              # 多语言引擎
+│       ├── locales/en.ts         # 英文翻译
+│       ├── locales/zh.ts         # 中文翻译
+│       ├── puter.ts              # 模型/积分/套餐配置
+│       ├── credits.ts            # 积分系统
 │       ├── api.ts                # OpenRouter API 封装
-│       ├── backend.ts           # localStorage 存储 + 站点统计
-│       ├── credits.ts           # 额度系统
-│       ├── examEngine.ts        # 题库 + 模拟考引擎
-│       ├── knowledgeBase.ts     # 知识库引擎
-│       ├── wikiEngine.ts        # 个人 Wiki 引擎
-│       ├── fileParser.ts        # 文件解析
-│       ├── questionAnalyzer.ts  # AI 课程预测
-│       └── prompts.ts           # 3 种模式 System Prompt
+│       ├── backend.ts            # localStorage 持久化
+│       ├── supabase.ts           # Supabase client (含 mock)
+│       ├── supabase-db.ts        # Supabase CRUD
+│       ├── payment-client.ts     # 支付 API 客户端
+│       ├── prompts.ts            # 模式 prompts
+│       ├── examEngine.ts         # 题库/考试引擎
+│       ├── knowledgeBase.ts      # 知识库引擎
+│       ├── wikiEngine.ts         # Wiki 引擎
+│       ├── questionAnalyzer.ts   # AI 分类
+│       ├── fileParser.ts         # 文件解析
+│       └── rate-limit.ts         # 速率限制 (server)
+├── payment-server/               # Express 支付服务
+│   ├── src/
+│   │   ├── index.ts              # 入口
+│   │   ├── paddle.ts             # Paddle checkout + webhook
+│   │   ├── stripe.ts / paypal.ts / lemonsqueezy.ts / payoneer.ts
+│   │   └── subscription-status.ts
+│   ├── .env
+│   └── package.json
+├── supabase/migrations/
+├── public/
+│   ├── robots.txt
+│   ├── sitemap.xml
+│   └── favicon.ico
+└── railwary.json
 ```
 
-## 启动方式
+## 启动
 
 ```bash
-cd E:\ai-study-puter
 npm install
-npm run dev       # http://localhost:3000
+npm run dev       # http://localhost:3000 (前端)
 npm run build     # 输出到 out/ 目录
+
+# 支付后端 (独立终端)
+cd payment-server
+npm install
+npm run build
+npm run start     # http://localhost:3001
 ```
 
-## 构建部署
+## 部署
 
 ```bash
+# 前端 → Cloudflare Pages
 npm run build
+# 自动通过 GitHub 连接部署
+
+# 支付后端 → Railway
+# 自动通过 GitHub 连接部署 (railway.json)
 ```
 
-## 数据存储
+## 版本历史
 
-所有数据存储在浏览器 localStorage 中。
-
-### v1.2.0 (2026-06-24)
-- **移除 Puter 依赖**: 改用 OpenRouter API，localStorage 存储
-- **新登录系统**: 用户名输入登录
-
-### v1.1.0 (2026-06-24)
-- **强度选择器**: 原"难度选择器"重命名为"强度选择器"，改为可拖动滑块UI，位于聊天框上方
-- **Auto 默认强度**: 初始为 Auto 模式，使用 `tencent/hy3-preview`，免费用户可用 Auto + Light
-- **Extreme 极速模式**: 多模型交叉验证 (GPT-4o + Claude 独立回答 → 合并结果)
-- **付费锁定**: Balanced/Deep/Extreme 强度需要付费套餐，点击弹出升级界面
-- **升级界面**: 全新 `UpgradeModal.tsx` 精美弹窗，3 套餐卡片对比，Popular 标签，玻璃背景
-- **积分耗尽自动升级**: 额度不足时自动弹出升级界面
-- **localStorage 存储**: 对话和额度数据存储在浏览器本地
-- **登录积分弹窗**: 登录后显示积分和套餐等级，5 秒自动消失，额度为 0 时显示升级链接
-- **侧边栏简化**: 移除左侧模式切换按钮，仅保留 Header 中央模式切换
-- **图片识别**: `tencent/hy3-preview` 作为 Vision Model，发送前自动识别图片内容
-- **标题生成优化**: 首次发送消息后 `tencent/hy3-preview` 自动生成对话标题 (6词内)
-- **站点仪表盘**: `AdminStats.tsx` 图形化查看用户数和存储键
-- **数据持久化**: localStorage + Puter KV 双备份，跨设备同步
-
-### v1.0.1 (2026-06-24)
-- 难度选择器从 header 移动到聊天框上方
-- 侧边栏模式按钮改为只切换模式，不再自动创建对话
-- 对话创建逻辑: 首次发送消息时自动创建，标题由 `tencent/hy3-preview` 自动生成
-- 登录后弹窗显示额度信息
-- 侧边栏增加 Upgrade 按钮
-- 新增 `lib/api.ts` (OpenRouter API 封装)
-
-### v1.0.0 (2026-06-23)
-- OpenRouter API 集成: AI 聊天
-- 登录系统: 用户名登录
-- 额度系统: 50积分/3小时
-- 三级难度选择: Easy/Medium/Hard
-- 付费方案 UI
-- 知识库/个人 Wiki/题库/模拟考/举一反三/检索
+### v0.1.0 (当前)
+- 移除 Puter.js, 接入 Supabase Auth
+- 重构积分系统: 50免费额度/月, 消耗全面下调
+- 新增 i18n 多语言: 英文/中文, 自动检测浏览器语言
+- 新增 Onboarding 引导系统 (pre-login + post-login)
+- 新增 Profile & Settings (昵称编辑/主题/语言切换)
+- 新增 Railway 支付后端 (Paddle)
+- 更新主题: stem-aistudy.com 上线
+- 侧栏顶部改为用户信息区 (头像+用户名)

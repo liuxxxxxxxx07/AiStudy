@@ -127,7 +127,7 @@ const FAQS = [
   { q: "How do AI credits work?", a: "Each AI request costs credits based on intensity (Auto=2 analysis + model cost, Light=3, Balanced=8, Deep=60, Extreme=1400) plus a mode fee (Solver=2, Visualizer=1, Chat=0). Credits reset monthly on the 1st. Study tools (Knowledge Base, Wiki, Question Bank, Flashcards, Mock Exam) use storage space, not credits." },
   { q: "What models can I access?", a: "Free tier: Auto + Light (DeepSeek v4-pro). Plus: adds Balanced (Qwen 3.7-Max + GLM 5.2). Pro: unlocks Hard (GPT-5.5 + Claude Opus 4.8) and Extreme (7-model cross-validation). Pro+: latest preview models too." },
   { q: "Is there storage or entry limits?", a: "Free tier: 10 entries total across Knowledge Base, Question Bank, and Wiki. Plus: 100 entries each. Pro and Pro+: unlimited entries across all study tools." },
-  { q: "What payment methods do you accept?", a: "Major credit cards (Visa, Mastercard), PayPal, Alipay, and WeChat Pay. All transactions are securely processed." },
+  { q: "What payment methods do you accept?", a: "Payments are processed securely by Paddle, which supports major credit cards (Visa, Mastercard), PayPal, and other local payment methods depending on your region." },
   { q: "Is there a free trial?", a: "All paid plans include a 7-day free trial. You won't be charged until the trial period ends. Cancel anytime during the trial at no cost." },
   { q: "Can I use it for commercial purposes?", a: "Yes, all paid plans allow commercial use. Pro+ is recommended for teams and commercial applications with SLA support." },
 ];
@@ -421,10 +421,9 @@ export default function PaymentPlans({ onBack, onSelect, userId, userEmail, curr
             <p className="text-sm text-muted uppercase tracking-wider font-semibold">Secure payment</p>
             <div className="flex items-center justify-center gap-6 flex-wrap">
               {[
-                { icon: CreditCard, label: "Visa / Mastercard" },
-                { icon: Shield, label: "Alipay" },
-                { icon: Clock, label: "WeChat Pay" },
-                { icon: CreditCard, label: "PayPal" },
+                { icon: Shield, label: "256-bit encrypted" },
+                { icon: CreditCard, label: "Cards & wallets" },
+                { icon: Shield, label: "Processed by Paddle" },
               ].map((pm, i) => (
                 <div key={i} className="flex items-center gap-1.5 text-sm text-muted">
                   <pm.icon className="w-4 h-4" />
@@ -433,7 +432,7 @@ export default function PaymentPlans({ onBack, onSelect, userId, userEmail, curr
               ))}
             </div>
             <p className="text-xs text-muted/50 max-w-md mx-auto">
-              Your payment info is encrypted. We never store your card details.
+              Your payment info is encrypted and processed securely by Paddle. We never store your card details.
             </p>
           </section>
 
