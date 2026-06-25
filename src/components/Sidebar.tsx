@@ -2,6 +2,7 @@
 
 import { Moon, Sun, Trash2, PanelLeftClose, Bookmark, BookOpen, GraduationCap, Search, Sparkles, LogOut, Coins, GitBranch } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useRouter } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
 import { getInitials, getAvatarColor } from "./ProfileSettings";
 
@@ -63,6 +64,7 @@ export default function Sidebar({
 }: SidebarProps) {
   const { t } = useI18n();
   const { theme, setTheme } = useTheme();
+  const router = useRouter();
 
   return (
     <aside className="w-60 flex-shrink-0 h-full bg-sidebar-bg border-r border-sidebar-border flex flex-col">
@@ -159,6 +161,13 @@ export default function Sidebar({
           <LogOut className="w-3.5 h-3.5" />
           {t("sidebar.signOut")}
         </button>
+        <div className="flex items-center justify-center gap-2 pt-2 pb-1 text-[9px] text-muted/30">
+          <button onClick={() => router.push("/terms")} className="hover:text-muted/60 transition-colors">Terms</button>
+          <span>·</span>
+          <button onClick={() => router.push("/privacy")} className="hover:text-muted/60 transition-colors">Privacy</button>
+          <span>·</span>
+          <button onClick={() => router.push("/refund")} className="hover:text-muted/60 transition-colors">Refund</button>
+        </div>
       </div>
     </aside>
   );
