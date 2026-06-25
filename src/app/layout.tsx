@@ -14,9 +14,33 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl = "https://stem-aistudy.com";
+
 export const metadata: Metadata = {
-  title: "AI Study",
-  description: "STEM Learning Engine",
+  title: "AI Study - STEM Learning Engine",
+  description: "AI-powered STEM learning platform. Solve problems, visualize concepts, and master math, physics, chemistry with intelligent AI assistance.",
+  keywords: ["STEM", "AI learning", "math solver", "physics", "chemistry", "education", "study tool"],
+  metadataBase: new URL(siteUrl),
+  openGraph: {
+    title: "AI Study - STEM Learning Engine",
+    description: "AI-powered STEM learning platform. Solve problems, visualize concepts, and master math, physics, chemistry with intelligent AI assistance.",
+    url: siteUrl,
+    siteName: "AI Study",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AI Study - STEM Learning Engine",
+    description: "AI-powered STEM learning platform.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
