@@ -5,7 +5,7 @@ export default function TermsPage() {
     <LegalPage title="Terms of Service">
       <h2 className="text-lg font-semibold mt-8 mb-2">1. Acceptance of Terms</h2>
       <p>
-        By accessing or using AI Study (&quot;the Service&quot;), you agree to be bound by these Terms of Service. If you do not agree, do not use the Service.
+        By accessing or using AI Study ("the Service"), operated by STEM AI Study ("we", "us", "our"), you agree to be bound by these Terms of Service. If you do not agree, do not use the Service.
       </p>
 
       <h2 className="text-lg font-semibold mt-8 mb-2">2. Description of Service</h2>
