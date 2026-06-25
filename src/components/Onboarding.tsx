@@ -23,9 +23,9 @@ export const PRE_LOGIN_SLIDES: Slide[] = [
     title: "欢迎来到 AI Study",
     subtitle: "你的 AI 驱动 STEM 学习引擎",
     features: [
-      { icon: <Brain className="w-4 h-4" />, label: "AI 解题", desc: "智能分析数理化难题" },
-      { icon: <BarChart3 className="w-4 h-4" />, label: "可视化", desc: "一句话生成 Mermaid 图表" },
-      { icon: <MessageSquare className="w-4 h-4" />, label: "自由对话", desc: "随时提问 AI 助教" },
+      { icon: <Brain className="w-4 h-4" />, label: "AI 驱动", desc: "基于前沿大模型，精准解答数理化难题" },
+      { icon: <Zap className="w-4 h-4" />, label: "多模式学习", desc: "解题、可视化、自由问答，灵活切换" },
+      { icon: <Coins className="w-4 h-4" />, label: "免费体验", desc: "注册即享 50 额度/月，无信用卡要求" },
     ],
   },
   {
