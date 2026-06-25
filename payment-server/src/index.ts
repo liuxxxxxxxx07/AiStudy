@@ -12,7 +12,8 @@ const PORT = parseInt(process.env.PORT || "3001", 10);
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "http://localhost:3000").split(",");
 
 app.use(cors({ origin: ALLOWED_ORIGINS, credentials: true }));
-
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
 app.get("/api/health", (_req, res) => {

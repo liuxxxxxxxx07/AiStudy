@@ -4,14 +4,14 @@ import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 export const runtime = "nodejs";
 
 const CREDIT_COST: Record<string, number> = {
-  auto: 2,
-  easy: 3,
-  medium: 8,
-  hard: 60,
-  extreme: 1400,
+  auto: 1,
+  easy: 2,
+  medium: 5,
+  hard: 30,
+  extreme: 700,
 };
 
-const MONTHLY_FREE_LIMIT = 5;
+const MONTHLY_FREE_LIMIT = 50;
 
 const serverBalances = new Map<string, { balance: number; month: string }>();
 
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       break;
     }
   }
-  if (cost === 0) cost = 2;
+  if (cost === 0) cost = 1;
 
   if (!deductServerCredits(userId, cost)) {
     return Response.json({

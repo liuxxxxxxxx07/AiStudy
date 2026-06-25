@@ -7,7 +7,7 @@ interface CreditData {
 }
 
 const MONTHLY_LIMITS: Record<string, number> = {
-  free: 5,
+  free: 50,
   plus: 200,
   pro: 2000,
   "pro+": 10000,
@@ -25,7 +25,7 @@ function getMonthKey(): string {
 function getCreditData(userId: string): CreditData {
   const raw = localStorage.getItem(getStorageKey(userId));
   if (!raw) {
-    return { balance: 5, lastResetMonth: getMonthKey(), tier: "free" };
+    return { balance: 50, lastResetMonth: getMonthKey(), tier: "free" };
   }
   return JSON.parse(raw) as CreditData;
 }

@@ -31,15 +31,15 @@ export const CROSS_VALIDATION_MODELS = [
 ];
 
 export const MODEL_CREDIT_COST: Record<string, number> = {
-  auto: 2,
-  easy: 3,
-  medium: 8,
-  hard: 60,
-  extreme: 1400,
+  auto: 1,
+  easy: 2,
+  medium: 5,
+  hard: 30,
+  extreme: 700,
 };
 
 export const MODE_COST: Record<string, number> = {
-  solver: 2,
+  solver: 1,
   visualizer: 1,
   chat: 0,
 };

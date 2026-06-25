@@ -78,7 +78,7 @@ create or replace function public.handle_new_credits()
 returns trigger as $$
 begin
   insert into public.credits (user_id, balance, tier)
-  values (new.id, 5, 'free');
+  values (new.id, 50, 'free');
   return new;
 end;
 $$ language plpgsql security definer;
