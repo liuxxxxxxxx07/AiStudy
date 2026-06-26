@@ -465,7 +465,11 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
         userEmail: user?.email as string | undefined,
         provider: "paddle",
       });
-      if (checkout.url) window.location.href = checkout.url;
+      if (checkout.transactionId) {
+        window.location.href = `/payment/success?tier=${tierId}&txn=${checkout.transactionId}`;
+      } else if (checkout.url) {
+        window.location.href = checkout.url;
+      }
     } catch (err) {
       setShowUpgrade(true);
       throw err;

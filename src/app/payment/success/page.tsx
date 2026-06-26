@@ -1,67 +1,84 @@
 "use client";
 
-import { useEffect, useState, Suspense, useCallback } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { CheckCircle, ArrowLeft, Sparkles } from "lucide-react";
 
-const PADDLE_CLIENT_TOKEN = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN || "";
+declare global {
+  interface Window {
+    Paddle: any;
+  }
+}
 
 function SuccessContent() {
   const [tier, setTier] = useState<string | null>(null);
   const [transactionId, setTransactionId] = useState<string | null>(null);
   const [checkingOut, setCheckingOut] = useState(true);
 
-  const updateCredits = useCallback((tierParam: string) => {
-    const userId = localStorage.getItem("ai-study-user-id");
-    if (userId) {
-      try {
-        const key = `ai-study-credits-${userId}`;
-        const raw = localStorage.getItem(key);
-        if (raw) {
-          const data = JSON.parse(raw);
-          data.tier = tierParam;
-          data.balance = tierParam === "pro+" ? 10000 : tierParam === "pro" ? 2000 : 200;
-          data.lastResetMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
-          localStorage.setItem(key, JSON.stringify(data));
-        }
-      } catch {}
-    }
-    setCheckingOut(false);
-  }, []);
-
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const txId = params.get("id") || params.get("transaction_id");
     const tierParam = params.get("tier");
+    const txnParam = params.get("txn");
 
     if (txId) setTransactionId(txId);
     if (tierParam) setTier(tierParam);
 
-    // Paddle checkout overlay: ?_ptpn=txn_... in URL
-    if (params.has("_ptpn") && tierParam) {
-      const script = document.createElement("script");
-      script.src = "https://cdn.paddle.com/paddle/v2/paddle.js";
-      script.async = true;
-      script.onload = () => {
-        (window as any).Paddle.Initialize({
-          token: PADDLE_CLIENT_TOKEN,
-          eventCallback: (event: any) => {
-            if (event.name === "checkout.completed") {
-              updateCredits(tierParam);
-            }
-          },
-        });
+    const updateCredits = () => {
+      const userId = localStorage.getItem("ai-study-user-id");
+      if (userId) {
+        try {
+          const key = `ai-study-credits-${userId}`;
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const data = JSON.parse(raw);
+            data.tier = tierParam;
+            data.balance = tierParam === "pro+" ? 10000 : tierParam === "pro" ? 2000 : 200;
+            data.lastResetMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+            localStorage.setItem(key, JSON.stringify(data));
+          }
+        } catch {}
+      }
+    };
+
+    // Explicit checkout: ?txn=txn_... in URL
+    if (txnParam && tierParam) {
+      const successUrl = `${window.location.origin}/payment/success?tier=${tierParam}`;
+      const loadPaddle = () => {
+        if (typeof window.Paddle !== "undefined") {
+          window.Paddle.Checkout.open({
+            transactionId: txnParam,
+            settings: { displayMode: "overlay", successUrl },
+          });
+          return;
+        }
+        const script = document.createElement("script");
+        script.src = "https://cdn.paddle.com/paddle/v2/paddle.js";
+        script.async = true;
+        script.onload = () => {
+          const token = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN || "";
+          window.Paddle.Initialize({ token });
+          setTimeout(() => {
+            window.Paddle.Checkout.open({
+              transactionId: txnParam,
+              settings: { displayMode: "overlay", successUrl },
+            });
+          }, 500);
+        };
+        document.head.appendChild(script);
       };
-      document.head.appendChild(script);
+      loadPaddle();
       return;
     }
 
-    // No _ptpn → user was redirected back after payment
+    // Post-payment redirect back (no txn/_ptpn): update credits
     if (tierParam) {
-      updateCredits(tierParam);
-    } else {
+      updateCredits();
       setCheckingOut(false);
+      return;
     }
-  }, [updateCredits]);
+
+    setCheckingOut(false);
+  }, []);
 
   if (checkingOut) {
     return (

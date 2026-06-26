@@ -54,7 +54,9 @@ export default function PricingPage() {
         provider,
       });
 
-      if (checkout.url) {
+      if (checkout.transactionId) {
+        window.location.href = `/payment/success?tier=${tierId}&txn=${checkout.transactionId}`;
+      } else if (checkout.url) {
         window.location.href = checkout.url;
       }
     } catch (err) {
