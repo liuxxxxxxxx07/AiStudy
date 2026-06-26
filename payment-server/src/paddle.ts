@@ -48,11 +48,14 @@ router.post("/create-checkout", async (req: Request, res: Response) => {
       },
     });
 
-    const checkoutUrl = transaction?.checkout?.url;
-    if (!checkoutUrl) {
-      res.status(500).json({ error: "Failed to generate checkout URL" });
+    const transactionId = transaction?.id;
+    if (!transactionId) {
+      res.status(500).json({ error: "Failed to create transaction" });
       return;
     }
+
+    const paddleEnv = process.env.PADDLE_ENV === "production" ? "" : "sandbox-";
+    const checkoutUrl = `https://${paddleEnv}checkout.paddle.com/checkout/${transactionId}`;
 
     res.json({
       url: checkoutUrl,
