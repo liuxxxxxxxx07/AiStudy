@@ -1,35 +1,75 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useCallback } from "react";
 import { CheckCircle, ArrowLeft, Sparkles } from "lucide-react";
+
+const PADDLE_CLIENT_TOKEN = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN || "";
 
 function SuccessContent() {
   const [tier, setTier] = useState<string | null>(null);
   const [transactionId, setTransactionId] = useState<string | null>(null);
+  const [checkingOut, setCheckingOut] = useState(true);
+
+  const updateCredits = useCallback((tierParam: string) => {
+    const userId = localStorage.getItem("ai-study-user-id");
+    if (userId) {
+      try {
+        const key = `ai-study-credits-${userId}`;
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const data = JSON.parse(raw);
+          data.tier = tierParam;
+          data.balance = tierParam === "pro+" ? 10000 : tierParam === "pro" ? 2000 : 200;
+          data.lastResetMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+          localStorage.setItem(key, JSON.stringify(data));
+        }
+      } catch {}
+    }
+    setCheckingOut(false);
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const txId = params.get("id") || params.get("transaction_id");
     const tierParam = params.get("tier");
+
     if (txId) setTransactionId(txId);
-    if (tierParam) {
-      setTier(tierParam);
-      const userId = localStorage.getItem("ai-study-user-id");
-      if (userId) {
-        try {
-          const key = `ai-study-credits-${userId}`;
-          const raw = localStorage.getItem(key);
-          if (raw) {
-            const data = JSON.parse(raw);
-            data.tier = tierParam;
-            data.balance = tierParam === "pro+" ? 10000 : tierParam === "pro" ? 2000 : 200;
-            data.lastResetMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
-            localStorage.setItem(key, JSON.stringify(data));
-          }
-        } catch {}
-      }
+    if (tierParam) setTier(tierParam);
+
+    // Paddle checkout overlay: ?_ptpn=txn_... in URL
+    if (params.has("_ptpn") && tierParam) {
+      const script = document.createElement("script");
+      script.src = "https://cdn.paddle.com/paddle/v2/paddle.js";
+      script.async = true;
+      script.onload = () => {
+        (window as any).Paddle.Initialize({
+          token: PADDLE_CLIENT_TOKEN,
+          eventCallback: (event: any) => {
+            if (event.name === "checkout.completed") {
+              updateCredits(tierParam);
+            }
+          },
+        });
+      };
+      document.head.appendChild(script);
+      return;
     }
-  }, []);
+
+    // No _ptpn → user was redirected back after payment
+    if (tierParam) {
+      updateCredits(tierParam);
+    } else {
+      setCheckingOut(false);
+    }
+  }, [updateCredits]);
+
+  if (checkingOut) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   const tierNames: Record<string, string> = {
     plus: "Plus",
