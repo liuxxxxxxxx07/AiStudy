@@ -466,8 +466,9 @@ export default function AppShell({ user, onLogout }: { user: Record<string, unkn
         provider: "paddle",
       });
       if (checkout.url) window.location.href = checkout.url;
-    } catch {
+    } catch (err) {
       setShowUpgrade(true);
+      throw err;
     }
   }, [userId, user?.email]);
 

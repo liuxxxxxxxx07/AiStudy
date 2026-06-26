@@ -155,12 +155,19 @@ export default function PaymentPlans({ onBack, onSelect, userId, userEmail, curr
   const [yearly, setYearly] = useState(false);
   const [loadingTier, setLoadingTier] = useState<string | null>(null);
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSelect = useCallback(async (tierId: string) => {
     setLoadingTier(tierId);
-    await new Promise((r) => setTimeout(r, 800));
-    onSelect?.(tierId);
-    setLoadingTier(null);
+    setError(null);
+    try {
+      await onSelect?.(tierId);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Checkout failed";
+      setError(msg);
+    } finally {
+      setLoadingTier(null);
+    }
   }, [onSelect]);
 
   return (
@@ -196,6 +203,12 @@ export default function PaymentPlans({ onBack, onSelect, userId, userEmail, curr
 
           {/* ── Billing Toggle ── */}
           <section className="flex justify-center">
+            {error && (
+              <div className="mb-4 px-5 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-600 text-center max-w-lg mx-auto">
+                {error}
+                <button onClick={() => setError(null)} className="ml-3 text-red-400 hover:text-red-600 font-bold">✕</button>
+              </div>
+            )}
             <div className="inline-flex items-center gap-1 bg-foreground/5 border border-divider rounded-lg p-0.5">
               <button
                 onClick={() => setYearly(false)}

@@ -84,7 +84,7 @@ export default function UpgradeModal({ onBack, onSelect, userId, userEmail, curr
     setError(null);
 
     try {
-      onSelect?.(tierId);
+      await onSelect?.(tierId);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Payment failed";
       setError(message);
