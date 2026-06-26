@@ -38,24 +38,16 @@ router.post("/create-checkout", async (req: Request, res: Response) => {
       return;
     }
 
-    const frontendUrl = process.env.FRONTEND_URL || "https://stem-aistudy.com";
-
     const transaction = await paddle.transactions.create({
       items: [{ priceId, quantity: 1 }],
       customData: { userId, tier } as Record<string, string>,
-      checkout: {
-        url: `${frontendUrl}/payment/success?tier=${encodeURIComponent(tier)}`,
-      },
     });
 
-    const transactionId = transaction?.id;
-    if (!transactionId) {
-      res.status(500).json({ error: "Failed to create transaction" });
+    const checkoutUrl = transaction?.checkout?.url;
+    if (!checkoutUrl) {
+      res.status(500).json({ error: "Failed to generate checkout URL" });
       return;
     }
-
-    const paddleEnv = process.env.PADDLE_ENV === "production" ? "" : "sandbox-";
-    const checkoutUrl = `https://${paddleEnv}checkout.paddle.com/checkout/${transactionId}`;
 
     res.json({
       url: checkoutUrl,
